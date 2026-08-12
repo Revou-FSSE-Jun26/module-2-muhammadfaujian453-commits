@@ -1,0 +1,27 @@
+# --- Sistem Operasi ---
+.DS_Store
+
+# --- IDE & Database Tools ---
+.vscode/
+.dbeaver/
+
+# --- Environment & Secrets ---
+.env
+.flaskenv
+
+# --- Python Virtual Environment ---
+venv/
+
+# --- Python Bytecode & Compiled Files ---
+__pycache__/
+*.pyc
+*.pyo
+
+# --- Flask & Data Lokal ---
+# Mengabaikan hierarki konfigurasi lokal Flask dan binari database
+instance/
+*.sqlite3
+*.db
+
+# --- Logs ---
+*.log
