@@ -11,11 +11,35 @@ class Users(db.Model):
     full_name = db.Column(db.String(100), nullable = False)
     created_at = db.Column(db.DateTime(timezone=True), default = datetime.utcnow)
 
+    role = db.Column(
+        db.Enum('admin', 'buyer', 'seller', name='user_role'), 
+        nullable=False, 
+        default='buyer'
+    )
+
     def to_dict(self):
         return {
             "id": self.id,
             "email": self.email,
             "full_name": self.full_name,
+            "role": self.role,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+# Model Sellers
+class Sellers(db.Model):
+    __tablename__ = 'sellers'
+
+    id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key = True)
+    store_name = db.Column(db.String(100), nullable = False, unique = True)
+    store_description = db.Column(db.String(999))
+    created_at = db.Column(db.DateTime(timezone=True), default = datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,  # id toko ini bernilai sama dengan id user pemiliknya
+            "store_name": self.store_name,
+            "store_description": self.store_description,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
@@ -42,6 +66,7 @@ class Products(db.Model):
 
     id = db.Column(db.BigInteger, primary_key = True)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id', ondelete='RESTRICT'), nullable = False)
+    seller_id = db.Column(db.BigInteger, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False)
     name = db.Column(db.String(255),nullable = False)
     description = db.Column(db.String(999))
     price = db.Column(db.Numeric(12, 2), nullable = False)
@@ -59,6 +84,7 @@ class Products(db.Model):
             "id": self.id,
             "category_id": self.category_id,
             "name": self.name,
+            "seller_id": self.seller_id,
             "description": self.description,
             "price": float(self.price) if self.price is not None else 0.0,
             "stock": self.stock,
