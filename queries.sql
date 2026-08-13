@@ -13,3 +13,13 @@ WHERE
 ORDER BY 
     price DESC
 LIMIT 2;
+
+-----------------------------------------------------------------------------------------------------------
+-- Untuk CheckPoint 2, DROP tabel terlebih dahulu agar riwayat migrasi terbaca dari awal
+
+DROP TABLE IF EXISTS order_items CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TYPE IF EXISTS order_status CASCADE;

@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 
@@ -11,6 +12,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATION'] = False
 
 db = SQLAlchemy(app)
 
+migrate = Migrate(app, db)
+
+from models import Users, Categories, Products, Orders, Order_Items
+import routes
 
 @app.route('/health')  # Endpoint untuk memeriksa konektivitas database.
 def index():
@@ -32,3 +37,7 @@ def index():
         db.session.close()
 
     return jsonify({"status": status})
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
