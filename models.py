@@ -1,6 +1,6 @@
 from datetime import datetime
 from app import db
-import sqlalchemy as sa
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Model User
 class Users(db.Model):
@@ -22,8 +22,16 @@ class Users(db.Model):
     )
 
     # Relationship between Table
-    seller_profile = db.relationship('Sellers', back_populates = 'user', uselist = False)
-    orders = db.relationship('Orders', back_populates = 'buyer')
+    seller_profile = db.relationship('Sellers', back_populates = 'user', uselist = False, lazy = 'joined')
+    orders = db.relationship('Orders', back_populates = 'buyer', lazy = 'selectin')
+
+    # Function  for Automate Password Plaintext Encyscription 
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    # Function for Checking between Login Password and Hash in Database
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
     # Function for Converting to Dictionary
     def to_dict(self):
@@ -49,7 +57,7 @@ class Sellers(db.Model):
 
     # Relationship between Table
     user = db.relationship('Users', back_populates = 'seller_profile')
-    products = db.relationship('Products', back_populates = 'seller')
+    products = db.relationship('Products', back_populates = 'seller', lazy = 'selection')
 
     # Function for Converting to Dictionary
     def to_dict(self):
@@ -73,7 +81,7 @@ class Categories(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
     # Relationship between Table
-    products = db.relationship('Products', back_populates = 'category')
+    products = db.relationship('Products', back_populates = 'category', lazy = 'selection')
 
     # Function for Converting to Dictionary
     def to_dict(self):
@@ -101,9 +109,9 @@ class Products(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
     # Relationship between Table
-    category = db.relationship('Categories', back_populates = 'products')
-    seller = db.relationship('Sellers', back_populates = 'products')
-    order_items = db.relationship('Order_Items', back_populates = 'product')
+    category = db.relationship('Categories', back_populates = 'products', lazy = 'joined')
+    seller = db.relationship('Sellers', back_populates = 'products', lazy = 'joined')
+    order_items = db.relationship('Order_Items', back_populates = 'product', lazy = 'selection')
 
     # Constraint for Column
     __table_args__ = (
@@ -138,8 +146,8 @@ class Orders(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
     # Relationship between Table
-    buyer = db.relationship('Users', back_populates = 'orders')
-    items = db.relationship('Order_Items', back_populates = 'order')
+    buyer = db.relationship('Users', back_populates = 'orders', lazy = 'joined')
+    items = db.relationship('Order_Items', back_populates = 'order', lazy = 'selection')
 
     # Constraint for Column
     __table_args__ = (
@@ -169,7 +177,7 @@ class Order_Items(db.Model):
 
     # Relationship between Table
     order = db.relationship('Orders', back_populates = 'items')
-    product = db.relationship('Products', back_populates = 'order_items')
+    product = db.relationship('Products', back_populates = 'order_items', lazy = 'joined')
 
     # Constraint for Column
     __table_args__ = (
