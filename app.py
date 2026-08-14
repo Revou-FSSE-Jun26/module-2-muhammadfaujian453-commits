@@ -1,6 +1,5 @@
 from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from flask_migrate import Migrate
 
@@ -8,13 +7,13 @@ app = Flask(__name__)
 
 # Konfigurasi Database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://mfaujian:pou444@localhost/revoshop_db'
-app.config['SQLALCHEMY_TRACK_MODIFICATION'] = False
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
 migrate = Migrate(app, db)
 
-from models import Users, Categories, Products, Orders, Order_Items
+from models import Users, Sellers, Categories, Products, Orders, Order_Items
 import routes
 
 @app.route('/health')  # Endpoint untuk memeriksa konektivitas database.
@@ -22,7 +21,7 @@ def index():
     try:
         # Menjalankan kueri SQL mentah dengan aman menggunakan text()
         status = "Database Connection Successfull!"
-        db.session.execute(text('SELECT 1'))
+        db.session.execute(db.text('SELECT 1'))
         print("Database Connection Successfull!")
     except SQLAlchemyError as e:
         # Menangkap eror spesifik dari SQLAlchemyv
