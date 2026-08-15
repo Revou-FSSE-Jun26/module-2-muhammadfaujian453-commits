@@ -1,6 +1,3 @@
-# =============================================================================================================
-# NOTES: I'M ALREADY MAKING ROUTES FOR "CHECKLIST 3 ASSIGNMENT" BUT I'M MAKING IT IN A COMMENT FORMAT RIGHT NOW
-# =============================================================================================================
 from flask import Blueprint, request, jsonify
 from app import db
 from models import Users, Sellers, Categories, Products, Orders, order_items
@@ -15,7 +12,7 @@ product_bp = Blueprint('product', __name__, url_prefix='/products')
 order_bp = Blueprint('order', __name__, url_prefix='/orders')
 
 
-# --- AUTHENTICATION AND RETRIEVAL (MODULE USER) - Decorator to check user access rights ---
+# --- AUTHENTICATION AND RETRIEVAL - Decorator to check user access rights ---
 def role_required(allowed_roles):
     def decorator(f):
         @wraps(f)
@@ -32,7 +29,6 @@ def role_required(allowed_roles):
                 return jsonify({"error": "Bad Request! 'user_id' must be a valid numeric integer."}), 400
 
             try:
-                # Cari user di database PostgreSQL menggunakan user_id yang sudah steril (pasti integer)
                 user = Users.query.get(user_id)
                 if not user:
                     return jsonify({"error": "User not found!"}), 404
@@ -46,14 +42,6 @@ def role_required(allowed_roles):
                     "error": "Database failure during authorization check!",
                     "details": str(e.__dict__.get('orig', e))
                 }), 500
-
-            # user = Users.query.get(user_id)
-            # if not user:
-            #     return jsonify({"error": "User not found!"}), 404
-
-            # if user.role not in allowed_roles:
-            #     role_format = ", ".join(allowed_roles)
-            #     return jsonify({"error": f"Access denied. Your account status is '{user.role}'; this route is only for '{role_format}'!"}), 403
 
             return f(*args, **kwargs)
         return decorated_function
@@ -106,35 +94,6 @@ def register_user():
         db.session.rollback()
         return jsonify({"error": f"Failed to save data: {str(e)}"}), 500
     
-# # User Login Route
-# @auth_bp.route('/login', methods=['POST'])
-# def login_user():
-#     data = request.get_json(silent=True) or {}
-
-#     email = data.get('email')
-#     password = data.get('password')
-
-#     if not email or not password:
-#         return jsonify({"error": "The email and password fields are required!"}), 400
-
-#     try:
-#         user = Users.query.filter_by(email=email).first()
-#         if not user or not user.check_password(password):
-#             return jsonify({"error": "Incorrect email or password!"}), 401
-
-#         return jsonify({
-#             "message": "Login successful! Welcome back.",
-#             "user": user.to_dict()
-#         }), 200
-
-#     except SQLAlchemyError as e:
-#         return jsonify({
-#             "error": "A database connection failure occurred during the login process!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
-        
-#     except Exception as e:
-#         return jsonify({"error": f"An internal system error occurred: {str(e)}"}), 500
 
 # Retrieve Specific User Data Route (Dynamic Route)
 @auth_bp.route('/users/<int:user_id>', methods=['GET'])
@@ -210,44 +169,6 @@ def delete_user(user_id):
 # =========================================================================
 # 2. CATEGORY MODULE (BLUEPRINT: category_bp | PREFIX: /categories)
 # =========================================================================
-
-# List All Categories Route
-# @category_bp.route('', methods=['GET'])
-# def list_categories():
-#     try:
-#         categories = Categories.query.all()
-#         return jsonify({
-#             "message": "Categories successfully retrieved!",
-#             "categories": [category.to_dict() for category in categories]
-#         }), 200
-
-#     except SQLAlchemyError as e:
-#         return jsonify({
-#             "error": "Failed to fetch categories from database!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
-
-# # Get Specific Category with its Products Route (Dynamic Route)
-# @category_bp.route('/<int:category_id>', methods=['GET'])
-# def get_category_by_id(category_id):
-#     try:
-#         category = Categories.query.get(category_id)
-#         if not category:
-#             return jsonify({"error": f"Category with ID {category_id} not found!"}), 404
-            
-#         category_data = category.to_dict()
-#         category_data['products'] = [product.to_dict() for product in category.products]
-        
-#         return jsonify({
-#             "message": "Category and its products successfully retrieved!",
-#             "category": category_data
-#         }), 200
-
-#     except SQLAlchemyError as e:
-#         return jsonify({
-#             "error": "Failed to fetch category details!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
 
 # Create New Category Route (Protected: Admin Only)
 @category_bp.route('', methods=['POST'])
@@ -329,113 +250,6 @@ def create_store():
             "details": str(e.__dict__.get('orig', e))
         }), 500
 
-
-# # Get Specific Store Profile with its Products (Dynamic Route)
-# @seller_bp.route('/<int:seller_id>', methods=['GET'])
-# def get_store_by_id(seller_id):
-#     try:
-#         store = Sellers.query.get(seller_id)
-#         if not store:
-#             return jsonify({"error": f"Store with ID {seller_id} not found!"}), 404
-
-#         store_data = store.to_dict()
-#         store_data['products'] = [product.to_dict() for product in store.products]
-
-#         return jsonify({
-#             "message": "Store profile and products successfully retrieved!",
-#             "store": store_data
-#         }), 200
-
-#     except SQLAlchemyError as e:
-#         return jsonify({
-#             "error": "Failed to fetch store profile details!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
-
-
-# # Update Store Profile Route (Protected: Owner Seller Only)
-# @seller_bp.route('/<int:seller_id>', methods=['PUT'])
-# @role_required(['seller'])
-# def update_store(seller_id):
-#     data = request.get_json(silent=True) or {}
-
-#     user_id = data.get('user_id') or request.args.get('user_id')
-
-#     if int(user_id) != seller_id:
-#         return jsonify({"error": "Unauthorized! You can only update your own store profile."}), 403
-
-#     store = Sellers.query.get(seller_id)
-#     if not store:
-#         return jsonify({"error": f"Store with ID {seller_id} not found!"}), 404
-
-#     new_store_name = data.get('store_name')
-#     new_store_description = data.get('store_description')
-
-#     if not new_store_name:
-#         return jsonify({"error": "The 'store_name' field cannot be empty!"}), 400
-
-#     if new_store_name != store.store_name:
-#         duplicate_name = Sellers.query.filter_by(store_name=new_store_name).first()
-#         if duplicate_name:
-#             return jsonify({"error": f"Store name '{new_store_name}' is already taken by another store!"}), 400
-
-#     try:
-#         store.store_name = new_store_name
-#         store.store_description = new_store_description
-#         db.session.commit()
-
-#         return jsonify({
-#             "message": "Store profile successfully updated!",
-#             "store": store.to_dict()
-#         }), 200
-
-#     except SQLAlchemyError as e:
-#         db.session.rollback()
-#         return jsonify({
-#             "error": "Database failure while updating store profile!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
-
-
-# # Close/Delete Store Profile Only
-# @seller_bp.route('/<int:seller_id>', methods=['DELETE'])
-# @role_required(['seller'])
-# def delete_store(seller_id):
-#     data = request.get_json(silent=True) or {}
-
-#     user_id = data.get('user_id') or request.args.get('user_id')
-
-#     if int(user_id) != seller_id:
-#         return jsonify({"error": "Unauthorized! You can only delete your own store profile."}), 403
-
-#     try:
-#         store = Sellers.query.get(seller_id)
-#         if not store:
-#             return jsonify({"error": f"Store with ID {seller_id} not found!"}), 404
-
-#         if store.products:
-#             return jsonify({
-#                 "error": "Cannot close store! Your store still has active products listed. Please delete all products first."
-#             }), 400
-
-#         user = Users.query.get(seller_id)
-#         if user:
-#             user.role = 'buyer'
-
-#         db.session.delete(store)
-#         db.session.commit()
-
-#         return jsonify({
-#             "message": "Your store profile has been successfully closed. Your user account role has been reverted back to 'buyer'!"
-#         }), 200
-
-#     except SQLAlchemyError as e:
-#         db.session.rollback()
-#         return jsonify({
-#             "error": "Database failure while closing store profile!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
-
 # =========================================================================
 # 4. PRODUCT MODULE (BLUEPRINT: product_bp | PREFIX: /products)
 # =========================================================================
@@ -502,38 +316,38 @@ def create_product():
 HARDCODED_PRODUCTS = [
     {
         "id": 1, 
-        "name": "Kripik Singkong Balado Premium", 
-        "description": "Camilan renyah pedas manis khas Nusantara.",
-        "price": 15000.00, 
+        "name": "MCB 3 Phase 16A", 
+        "description": "Miniature Circuit Breaker untuk proteksi arus lebih",
+        "price": 155000.00, 
         "stock": 50, 
-        "category_id": 1, 
-        "seller_id": 2
+        "category_id": 2, 
+        "seller_id": 4
     },
     {
         "id": 2, 
-        "name": "Basreng Pedas Daun Jeruk", 
-        "description": "Bakso goreng kriuk potongan stik aroma daun jeruk segar.",
-        "price": 12000.00, 
-        "stock": 35, 
-        "category_id": 1, 
-        "seller_id": 2
-    },
-    {
-        "id": 3, 
-        "name": "Kemeja Flanel Casual Unisex", 
-        "description": "Kemeja lengan panjang bahan katun premium adem.",
-        "price": 135000.00, 
-        "stock": 20, 
-        "category_id": 3, 
-        "seller_id": 3
+        "name": "Box Panel Indoor 40x50x20", 
+        "description": "Plat baja tebal 1.2mm dengan powder coating",
+        "price": 450000.00, 
+        "stock": 15, 
+        "category_id": 2, 
+        "seller_id": 4
     },
     {
         "id": 4, 
-        "name": "Celana Chino Slimfit Stretch", 
-        "description": "Celana panjang bahan melar premium untuk hangout.",
-        "price": 150000.00, 
-        "stock": 0, 
-        "category_id": 4, 
+        "name": "Cokelat Almond Premium Bar", 
+        "description": "Cokelat hitam 65 persen dengan kacang almond panggang utuh",
+        "price": 35000.00, 
+        "stock": 100, 
+        "category_id": 1, 
+        "seller_id": 3
+    },
+    {
+        "id": 5, 
+        "name": "Truffle Cokelat Lumer Pack", 
+        "description": "Isi 10 pcs truffle dengan taburan bubuk kakao murni",
+        "price": 45000.00, 
+        "stock": 80, 
+        "category_id": 1, 
         "seller_id": 3
     }
 ]
@@ -561,383 +375,93 @@ def get_product_by_id(product_id):
         "product": product
     }), 200
 
-# # List All Products Route
-# @product_bp.route('', methods=['GET'])
-# def list_products():
-#     try:
-#         products = Products.query.all()
-#         return jsonify({
-#             "message": "Products successfully retrieved!",
-#             "products": [product.to_dict() for product in products]
-#         }), 200
-    
-#     except SQLAlchemyError as e:
-#         return jsonify({
-#             "error": "Failed to fetch products catalog!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
+# =========================================================================
+# 5. ORDER MODULE (BLUEPRINT: order_bp | PREFIX: /orders)
+# =========================================================================
 
+# Place a New Order Route
+@order_bp.route('', methods=['POST'])
+@role_required(['buyer', 'seller'])
+def create_order():
+    data = request.get_json(silent=True) or {}
 
-# # Get Specific Product Details Route
-# @product_bp.route('/<int:product_id>', methods=['GET'])
-# def get_product_by_id(product_id):
-#     try:
-#         product = Products.query.get(product_id)
-#         if not product:
-#             return jsonify({"error": f"Product with ID {product_id} not found!"}), 404
+    user_id = data.get('user_id') or request.args.get('user_id')
+    items_data = data.get('items')
 
-#         return jsonify({
-#             "message": "Product details successfully retrieved!",
-#             "product": product.to_dict()
-#         }), 200
-    
-#     except SQLAlchemyError as e:
-#         return jsonify({
-#             "error": "Failed to fetch product details!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
+    if not items_data or not isinstance(items_data, list):
+        return jsonify({"error": "The 'items' field is required and must be a list of products!"}), 400
 
-
-# # Update Product Route (Protected: Owner Seller Only with Input Validation)
-# @product_bp.route('/<int:product_id>', methods=['PUT'])
-# @role_required(['seller'])
-# def update_product(product_id):
-#     data = request.get_json(silent=True) or {}
-
-#     seller_id = data.get('user_id') or request.args.get('user_id')
-
-#     product = Products.query.get(product_id)
-#     if not product:
-#         return jsonify({"error": f"Product with ID {product_id} not found!"}), 404
-
-#     if product.seller_id != int(seller_id):
-#         return jsonify({"error": "Unauthorized! You can only update your own products."}), 403
-
-#     name = data.get('name')
-#     description = data.get('description')
-#     price_raw = data.get('price')
-#     stock_raw = data.get('stock')
-#     category_id = data.get('category_id')
-
-#     if not name or price_raw is None or stock_raw is None or category_id is None:
-#         return jsonify({"error": "The name, price, stock, and category_id fields are required!"}), 400
-
-#     try:
-#         price = float(price_raw)
-#         stock = int(stock_raw)
-#     except (ValueError, TypeError):
-#         return jsonify({
-#             "error": "Bad Request! The 'price' field must be a valid numeric decimal and 'stock' must be an integer value."
-#         }), 400
-
-#     if price < 0 or stock < 0:
-#         return jsonify({"error": "Price and Stock cannot be negative values!"}), 400
-
-#     if category_id != product.category_id:
-#         category = Categories.query.get(category_id)
-#         if not category:
-#             return jsonify({"error": f"Category with ID {category_id} does not exist!"}), 404
-
-#     try:
-#         product.name = name
-#         product.description = description
-#         product.price = price
-#         product.stock = stock
-#         product.category_id = category_id
+    aggregated_cart = {}
+    for item in items_data:
+        p_id = item.get('product_id')
+        raw_qty = item.get('quantity')
         
-#         db.session.commit()
+        if not p_id or raw_qty is None:
+            return jsonify({"error": "Each item must include product_id and quantity!"}), 400
 
-#         return jsonify({
-#             "message": "Product successfully updated!",
-#             "product": product.to_dict()
-#         }), 200
+        try:
+            qty = int(raw_qty)
+        except (ValueError, TypeError):
+            return jsonify({"error": "Bad Request! Quantity values must be valid integers."}), 400
 
-    # except SQLAlchemyError as e:
-    #     db.session.rollback()
-    #     return jsonify({
-    #         "error": "Database failure while updating product!",
-    #         "details": str(e.__dict__.get('orig', e))
-    #     }), 500
+        if qty <= 0:
+            return jsonify({"error": "Quantity must be greater than 0!"}), 400
 
-
-# # Delete Product Route
-# @product_bp.route('/products/<int:product_id>', methods=['DELETE'])
-# @role_required(['seller'])
-# def delete_product(product_id):
-#     data = request.get_json(silent=True) or {}
-
-#     seller_id = data.get('user_id') or request.args.get('user_id')
-
-#     product = Products.query.get(product_id)
-#     if not product:
-#         return jsonify({"error": f"Product with ID {product_id} not found!"}), 404
-
-#     if product.seller_id != int(seller_id):
-#         return jsonify({"error": "Unauthorized! You can only delete your own products."}), 403
-
-#     active_order_link = db.session.execute(
-#         db.select(order_items).where(order_items.c.product_id == product_id)
-#     ).first()
-    
-#     if active_order_link:
-#         return jsonify({
-#             "error": "Cannot delete product! This item is linked to active or historical order records (Deletion Guard Blocked)."
-#         }), 400
-
-#     try:
-#         db.session.delete(product)
-#         db.session.commit()
-#         return jsonify({"message": f"Product with ID {product_id} has been successfully deleted!"}), 200
-    
-#     except SQLAlchemyError as e:
-#         db.session.rollback()
-#         return jsonify({
-#             "error": "Database failure while deleting product!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
-
-# # =========================================================================
-# # 5. ORDER MODULE (BLUEPRINT: order_bp | PREFIX: /orders)
-# # =========================================================================
-
-# # Place a New Order Route
-# @order_bp.route('', methods=['POST'])
-# @role_required(['buyer', 'seller'])
-# def create_order():
-#     data = request.get_json(silent=True) or {}
-
-#     user_id = data.get('user_id') or request.args.get('user_id')
-#     items_data = data.get('items')
-
-#     if not items_data or not isinstance(items_data, list):
-#         return jsonify({"error": "The 'items' field is required and must be a list of products!"}), 400
-
-#     aggregated_cart = {}
-#     for item in items_data:
-#         p_id = item.get('product_id')
-#         raw_qty = item.get('quantity')
-        
-#         if not p_id or raw_qty is None:
-#             return jsonify({"error": "Each item must include product_id and quantity!"}), 400
-
-#         try:
-#             qty = int(raw_qty)
-#         except (ValueError, TypeError):
-#             return jsonify({"error": "Bad Request! Quantity values must be valid integers."}), 400
-
-#         if qty <= 0:
-#             return jsonify({"error": "Quantity must be greater than 0!"}), 400
-
-#         if p_id in aggregated_cart:
-#             aggregated_cart[p_id] += qty
-#         else:
-#             aggregated_cart[p_id] = qty
+        if p_id in aggregated_cart:
+            aggregated_cart[p_id] += qty
+        else:
+            aggregated_cart[p_id] = qty
 
 
-#     try:
-#         total_amount = 0
-#         order_items_to_create = []
+    try:
+        total_amount = 0
+        order_items_to_create = []
 
-#         for p_id, qty in aggregated_cart.items():
-#             product = Products.query.get(p_id)
-#             if not product:
-#                 return jsonify({"error": f"Product with ID {p_id} not found!"}), 404
+        for p_id, qty in aggregated_cart.items():
+            product = Products.query.get(p_id)
+            if not product:
+                return jsonify({"error": f"Product with ID {p_id} not found!"}), 404
 
-#             if product.seller_id == int(user_id):
-#                 return jsonify({"error": f"Violation! You cannot purchase your own product '{product.name}' from your own store."}), 400
+            if product.seller_id == int(user_id):
+                return jsonify({"error": f"Violation! You cannot purchase your own product '{product.name}' from your own store."}), 400
 
-#             if product.stock < qty:
-#                 return jsonify({"error": f"Insufficient stock for product '{product.name}'! Available stock: {product.stock}"}), 400
+            if product.stock < qty:
+                return jsonify({"error": f"Insufficient stock for product '{product.name}'! Available stock: {product.stock}"}), 400
 
-#             item_price = float(product.price)
-#             total_amount += item_price * int(qty)
+            item_price = float(product.price)
+            total_amount += item_price * int(qty)
 
-#             product.stock -= int(qty)
+            product.stock -= int(qty)
 
-#             order_items_to_create.append({
-#                 "product_id": p_id,
-#                 "quantity": int(qty),
-#                 "unit_price": item_price
-#             })
+            order_items_to_create.append({
+                "product_id": p_id,
+                "quantity": int(qty),
+                "unit_price": item_price
+            })
 
-#         new_order = Orders(user_id=user_id, status='PENDING', total_amount=total_amount)
-#         db.session.add(new_order)
-#         db.session.flush()
+        new_order = Orders(user_id=user_id, status='PENDING', total_amount=total_amount)
+        db.session.add(new_order)
+        db.session.flush()
 
-#         for oi in order_items_to_create:
-#             statement = order_items.insert().values(
-#                 order_id=new_order.id,
-#                 product_id=oi["product_id"],
-#                 quantity=oi["quantity"],
-#                 unit_price=oi["unit_price"]
-#             )
-#             db.session.execute(statement)
+        for oi in order_items_to_create:
+            statement = order_items.insert().values(
+                order_id=new_order.id,
+                product_id=oi["product_id"],
+                quantity=oi["quantity"],
+                unit_price=oi["unit_price"]
+            )
+            db.session.execute(statement)
 
-#         db.session.commit()
+        db.session.commit()
 
-#         return jsonify({
-#             "message": "Order successfully placed!",
-#             "order": new_order.to_dict()
-#         }), 201
+        return jsonify({
+            "message": "Order successfully placed!",
+            "order": new_order.to_dict()
+        }), 201
 
-#     except SQLAlchemyError as e:
-#         db.session.rollback()
-#         return jsonify({
-#             "error": "Database failure while processing checkout order!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
-
-
-# # List All Orders for Current User (Buyer View / Seller Audit)
-# @order_bp.route('', methods=['GET'])
-# @role_required(['buyer', 'seller', 'admin'])
-# def list_orders():
-#     data = request.get_json(silent=True) or {}
-#     user_id = request.args.get('user_id') or data.get('user_id')
-
-#     if not user_id:
-#         return jsonify({"error": "The 'user_id' url parameter is required to view order history!"}), 400
-
-#     try:
-#         user = Users.query.get(user_id)
-#         if not user:
-#             return jsonify({"error": "User not found!"}), 404
-
-#         if user.role == 'buyer':
-#             user_orders = Orders.query.filter_by(user_id=user_id).all()
-        
-#         elif user.role == 'seller':
-#             user_orders = Orders.query.join(order_items).join(Products).filter(Products.seller_id == user_id).distinct().all()
-#         else:
-#             user_orders = Orders.query.all()
-
-#         return jsonify({
-#             "message": "Orders history successfully retrieved!",
-#             "orders": [order.to_dict() for order in user_orders]
-#         }), 200
-
-#     except SQLAlchemyError as e:
-#         return jsonify({
-#             "error": "Failed to fetch orders history!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
-
-
-# # View Specific Order Detail with its Order Items (Dynamic Route)
-# @order_bp.route('/<int:order_id>', methods=['GET'])
-# @role_required(['buyer', 'seller', 'admin'])
-# def get_order_by_id(order_id):
-#     data = request.get_json(silent=True) or {}
-#     requester_id = data.get('user_id') or request.args.get('user_id')
-
-#     try:
-#         order = Orders.query.get(order_id)
-#         if not order:
-#             return jsonify({"error": f"Order with ID {order_id} not found!"}), 404
-
-#         if order.user_id != int(requester_id):
-#             requester_user = Users.query.get(requester_id)
-
-#             if requester_user:
-#                 if requester_user.role == 'admin':
-#                     pass
-
-#             elif requester_user.role == 'seller':
-#                     cross_query = db.select(order_items).join(
-#                         Products, order_items.c.product_id == Products.id
-#                     ).where(
-#                         order_items.c.order_id == order_id,
-#                         Products.seller_id == int(requester_id)
-#                     )
-                    
-#                     has_item_in_order = db.session.execute(cross_query).first()
-                    
-#                     if not has_item_in_order:
-#                         return jsonify({"error": "Unauthorized! As a seller, you can only view orders containing your store's products."}), 403
-                
-#             else:
-#                 return jsonify({"error": "Unauthorized! You can only view details of your own purchase history records."}), 403
-
-#         else:
-#                 return jsonify({"error": "Unauthorized! User profile not found."}), 403
-
-#         order_data = order.to_dict()
-
-#         query_statement = db.select(
-#             order_items.c.product_id, 
-#             order_items.c.quantity, 
-#             order_items.c.unit_price
-#         ).where(order_items.c.order_id == order_id)
-        
-#         result_rows = db.session.execute(query_statement).all()
-
-#         formatted_items = []
-#         for row in result_rows:
-#             formatted_items.append({
-#                 "order_id": order_id,
-#                 "product_id": row.product_id,
-#                 "quantity": row.quantity,
-#                 "unit_price": float(row.unit_price) if row.unit_price is not None else 0.0
-#             })
-
-#         order_data['order_items'] = formatted_items
-
-#         return jsonify({
-#             "message": "Order details successfully retrieved!",
-#             "order": order_data
-#         }), 200
-
-#     except SQLAlchemyError as e:
-#         return jsonify({
-#             "error": "Failed to fetch order details!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500       
-
-
-# # Delete / Cancel Order Route
-# @order_bp.route('/<int:order_id>', methods=['DELETE'])
-# @role_required(['buyer', 'seller', 'admin'])
-# def delete_order(order_id):
-#     data = request.get_json(silent=True) or {}
-#     user_id = request.args.get('user_id') or data.get('user_id')
-    
-#     if not user_id:
-#         return jsonify({"error": "The 'user_id' is required to authorize order deletion!"}), 400
-
-#     try:
-#         order = Orders.query.get(order_id)
-#         if not order:
-#             return jsonify({"error": f"Order with ID {order_id} not found!"}), 404
-
-#         if order.user_id != int(user_id):
-#             user_checker = Users.query.get(user_id)
-#             if not user_checker or user_checker.role != 'admin':
-#                 return jsonify({"error": "Unauthorized! You can only delete or cancel your own orders."}), 403
-
-#         if order.status != 'PENDING':
-#             return jsonify({
-#                 "error": f"Action blocked! Cannot delete or cancel an order that is already '{order.status}'. Only 'PENDING' orders can be removed."
-#             }), 400
-
-#         query_statement = db.select(order_items.c.product_id, order_items.c.quantity).where(order_items.c.order_id == order_id)
-#         result_rows = db.session.execute(query_statement).all()
-
-#         for row in result_rows:
-#             product = Products.query.get(row.product_id)
-#             if product:
-#                 product.stock += row.quantity
-
-#         db.session.delete(order)
-#         db.session.commit()
-
-#         return jsonify({
-#             "message": f"Order with ID {order_id} was in 'PENDING' status and has been successfully canceled and deleted from the system."
-#         }), 200
-
-#     except SQLAlchemyError as e:
-#         db.session.rollback()
-#         return jsonify({
-#             "error": "Database failure while deleting order!",
-#             "details": str(e.__dict__.get('orig', e))
-#         }), 500
-
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({
+            "error": "Database failure while processing checkout order!",
+            "details": str(e.__dict__.get('orig', e))
+        }), 500
