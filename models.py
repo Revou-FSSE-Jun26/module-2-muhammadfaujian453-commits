@@ -2,7 +2,9 @@ from datetime import datetime
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# Model User
+# =========================================================================
+# 1. MODEL USER
+# =========================================================================
 class Users(db.Model):
     __tablename__ = 'users'
 
@@ -44,7 +46,9 @@ class Users(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
 
-# Model Sellers
+# =========================================================================
+# 2. MODEL SELLERS
+# =========================================================================
 class Sellers(db.Model):
     __tablename__ = 'sellers'
 
@@ -57,7 +61,7 @@ class Sellers(db.Model):
 
     # Relationship between Table
     user = db.relationship('Users', back_populates = 'seller_profile')
-    products = db.relationship('Products', back_populates = 'seller', lazy = 'selection')
+    products = db.relationship('Products', back_populates = 'seller', lazy = 'selectin')
 
     # Function for Converting to Dictionary
     def to_dict(self):
@@ -69,7 +73,9 @@ class Sellers(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
 
-# Model Categories
+# =========================================================================
+# 3. MODEL CATEGORIES
+# =========================================================================
 class Categories(db.Model):
     __tablename__ = 'categories'
 
@@ -81,7 +87,7 @@ class Categories(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
     # Relationship between Table
-    products = db.relationship('Products', back_populates = 'category', lazy = 'selection')
+    products = db.relationship('Products', back_populates = 'category', lazy = 'selectin')
 
     # Function for Converting to Dictionary
     def to_dict(self):
@@ -93,7 +99,9 @@ class Categories(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
 
-# Model Products
+# =========================================================================
+# 4. MODEL PRODUCTS
+# =========================================================================
 class Products(db.Model):
     __tablename__ = 'products'
 
@@ -111,7 +119,6 @@ class Products(db.Model):
     # Relationship between Table
     category = db.relationship('Categories', back_populates = 'products', lazy = 'joined')
     seller = db.relationship('Sellers', back_populates = 'products', lazy = 'joined')
-    order_items = db.relationship('Order_Items', back_populates = 'product', lazy = 'selection')
 
     # Constraint for Column
     __table_args__ = (
@@ -133,7 +140,22 @@ class Products(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
 
-# Model Orders
+# =========================================================================
+# 5. ORDER_ITEMS TABLE (ASSOCIATION)
+# =========================================================================
+order_items = db.Table(
+    'order_items',
+    db.Column('order_id', db.BigInteger, db.ForeignKey('orders.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('product_id', db.BigInteger, db.ForeignKey('products.id', ondelete='RESTRICT'), primary_key=True),
+    db.Column('quantity', db.Integer, nullable=False),
+    db.Column('unit_price', db.Numeric(12, 2), nullable=False),
+    db.CheckConstraint('quantity > 0', name='order_items_quantity_check'),
+    db.CheckConstraint('unit_price >= 0', name='order_items_unit_price_check')
+)
+
+# =========================================================================
+# 6. MODEL ORDERS
+# =========================================================================
 class Orders(db.Model):
     __tablename__ = 'orders'
 
@@ -147,7 +169,12 @@ class Orders(db.Model):
 
     # Relationship between Table
     buyer = db.relationship('Users', back_populates = 'orders', lazy = 'joined')
-    items = db.relationship('Order_Items', back_populates = 'order', lazy = 'selection')
+    products = db.relationship(
+        'Products',
+        secondary = order_items,
+        lazy = 'selectin',
+        backref=db.backref('orders', lazy='selectin')
+    )
 
     # Constraint for Column
     __table_args__ = (
@@ -163,33 +190,4 @@ class Orders(db.Model):
             "total_amount": float(self.total_amount) if self.total_amount is not None else 0.0,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }
-
-# Model Order_Items
-class Order_Items(db.Model):
-    __tablename__ = 'order_items'
-
-    # Generate Column and it's Criteria
-    order_id = db.Column(db.BigInteger, db.ForeignKey('orders.id', ondelete='CASCADE'), primary_key = True)
-    product_id = db.Column(db.BigInteger, db.ForeignKey('products.id', ondelete='RESTRICT'), primary_key = True)
-    quantity = db.Column(db.Integer, nullable = False)
-    unit_price = db.Column(db.Numeric(12, 2), nullable = False)
-
-    # Relationship between Table
-    order = db.relationship('Orders', back_populates = 'items')
-    product = db.relationship('Products', back_populates = 'order_items', lazy = 'joined')
-
-    # Constraint for Column
-    __table_args__ = (
-        db.CheckConstraint('quantity > 0', name='order_items_quantity_check'),
-        db.CheckConstraint('unit_price >= 0', name='order_items_unit_price_check'),
-    )
-
-    # Function for Converting to Dictionary
-    def to_dict(self):
-        return {
-            "order_id": self.order_id,
-            "product_id": self.product_id,
-            "quantity": self.quantity,
-            "unit_price": float(self.unit_price) if self.unit_price is not None else 0.0
         }
