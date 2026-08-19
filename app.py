@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from flask_migrate import Migrate
+from flask_jwt_extended import JWTManager
 from config import Config
 from utils import db
 

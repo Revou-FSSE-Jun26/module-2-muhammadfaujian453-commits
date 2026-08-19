@@ -1,6 +1,6 @@
 from datetime import datetime
 from utils import db
-from werkzeug.security import generate_password_hash, check_password_hash
+from auth import hash_password, check_password
 
 # =========================================================================
 # 1. MODEL USER
@@ -29,11 +29,11 @@ class Users(db.Model):
 
     # Function  for Automate Password Plaintext Encyscription 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = hash_password(password)
 
     # Function for Checking between Login Password and Hash in Database
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+        return check_password(password, self.password_hash)
 
     # Function for Converting to Dictionary
     def to_dict(self):

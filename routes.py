@@ -1,59 +1,28 @@
 from flask import Blueprint, request, jsonify
-from app import db
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
+from utils import db
 from models import Users, Sellers, Categories, Products, Orders, order_items
-from functools import wraps
 from sqlalchemy.exc import SQLAlchemyError
+from auth import roles_required
 
-# Blueprint Module
+# -------------------------------------------------------------------------
+# BLUEPRINT DEFINITIONS
+# -------------------------------------------------------------------------
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+users_bp = Blueprint('users', __name__, url_prefix='/users')
 category_bp = Blueprint('category', __name__, url_prefix='/categories')
 seller_bp = Blueprint('seller', __name__, url_prefix='/sellers')
 product_bp = Blueprint('product', __name__, url_prefix='/products')
 order_bp = Blueprint('order', __name__, url_prefix='/orders')
 
-
-# --- AUTHENTICATION AND RETRIEVAL - Decorator to check user access rights ---
-def role_required(allowed_roles):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            data = request.get_json(silent=True) or {}
-            raw_user_id = data.get('user_id') or request.args.get('user_id')
-
-            if not raw_user_id:
-                return jsonify({"error": "Access denied. user_id is required!"}), 401
-
-            try:
-                user_id = int(raw_user_id)
-            except ValueError:
-                return jsonify({"error": "Bad Request! 'user_id' must be a valid numeric integer."}), 400
-
-            try:
-                user = Users.query.get(user_id)
-                if not user:
-                    return jsonify({"error": "User not found!"}), 404
-                    
-                if user.role not in allowed_roles:
-                    role_format = ", ".join(allowed_roles)
-                    return jsonify({"error": f"Access denied. Your account status is '{user.role}'; this route is only for '{role_format}'!"}), 403
-
-            except SQLAlchemyError as e:
-                return jsonify({
-                    "error": "Database failure during authorization check!",
-                    "details": str(e.__dict__.get('orig', e))
-                }), 500
-
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
 # =========================================================================
 # 1. USER MODULE (BLUEPRINT: auth_bp | PREFIX: /auth)
 # =========================================================================
 
-# New User Registration Route
-@auth_bp.route('/users', methods = ['POST'])
+# A. New User Registration Route
+@auth_bp.route('', methods = ['POST'])
 def register_user():
+    """ Register a new user based on rubric criteria"""
     data = request.get_json(silent=True) or {}
 
     email = data.get('email')
@@ -93,24 +62,24 @@ def register_user():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Failed to save data: {str(e)}"}), 500
-    
 
-# Retrieve Specific User Data Route (Dynamic Route)
-@auth_bp.route('/users/<int:user_id>', methods=['GET'])
-@role_required(['buyer', 'seller', 'admin'])
+
+# B. Retrieve Specific User Route
+@auth_bp.route('/<int:user_id>', methods=['GET'])
+@jwt_required()
 def get_user_by_id(user_id):
-    data = request.get_json(silent=True) or {}
-    requester_id = data.get('user_id') or request.args.get('user_id')
+    # Identity extraction from JWT Token
+    requester_id = int(get_jwt_identity())
+    claims = get_jwt()
+    requester_role= claims.get('role')
 
     try:
         user = Users.query.get(user_id)
         if not user:
             return jsonify({"error": f"User with ID {user_id} not found on the system!"}), 404
 
-        if int(requester_id) != user_id:
-            requester_user = Users.query.get(requester_id)
-            if not requester_user or requester_user.role != 'admin':
-                return jsonify({"error": "Unauthorized! You can only view your own profile data unless you are an admin."}), 403
+        if requester_id != user_id and requester_role != 'admin':
+            return jsonify({"error": "Unauthorized! You can only view your own profile data unless you are an admin."}), 403
     
         return jsonify({
             "message": "User data successfully retrieved!",
@@ -125,25 +94,25 @@ def get_user_by_id(user_id):
 
 # Delete User Account Route
 @auth_bp.route('/users/<int:user_id>', methods=['DELETE'])
-@role_required(['buyer', 'seller', 'admin'])
+@jwt_required()
 def delete_user(user_id):
-    data = request.get_json(silent=True) or {}
-    requester_id = data.get('user_id') or request.args.get('user_id')
+    # Identity extraction from JWT Token
+    requester_id = int(get_jwt_identity())
+    claims = get_jwt()
+    requester_role = claims.get('role')
 
     try:
         user = Users.query.get(user_id)
         if not user:
             return jsonify({"error": f"User with ID {user_id} not found on the system!"}), 404
 
-        if int(requester_id) != user_id:
-            requester_user = Users.query.get(requester_id)
-            if not requester_user or requester_user.role != 'admin':
-                return jsonify({"error": "Unauthorized! You can only delete your own account unless you are an admin."}), 403
+        if requester_id != user_id and requester_role != 'admin':
+            return jsonify({"error": "Unauthorized! You can only delete your own account unless you are an admin."}), 403
 
         any_purchase_history = Orders.query.filter_by(user_id=user_id).first()
         if any_purchase_history:
             return jsonify({
-                "error": "Cannot delete account! This user profile is linked to historical purchase order records. Database restriction applied."
+                "error": "Cannot delete account! This user profile is linked to historical purchase order records."
             }), 400
 
         if user.role == 'seller' and user.seller_profile:
@@ -165,6 +134,40 @@ def delete_user(user_id):
             "error": "Database failure while deleting user account!",
             "details": str(e.__dict__.get('orig', e))
         }), 500
+
+# =========================================================================
+# 2. AUTH MODULE (BLUEPRINT: auth_bp | PREFIX: /auth)
+# =========================================================================
+
+@auth_bp.route('/login', methods=['POST'])
+def login():
+    """ Login and generate JWT Token"""
+    data = request.get_json(silent=True) or ()
+
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({"error": 'Missing email or password'}), 400
+
+    # Retrieve user and verify password
+    user = Users.query.filter_by(email=email).first()
+
+    if user is None or not user.check_password(password):
+        return jsonify({"error": 'Invalid email or password'}), 401
+
+    # Generate JWT Token carrying the user's ID and Role
+    token = create_access_token(
+        identity=str(user.id),
+        additional_claims={"role": user.role}
+    )
+
+    return jsonify({
+        "message": 'Login successful',
+        "token": token,
+        'user': user.to_dict()
+    }), 200
+
 
 # =========================================================================
 # 2. CATEGORY MODULE (BLUEPRINT: category_bp | PREFIX: /categories)
