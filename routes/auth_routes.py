@@ -47,7 +47,7 @@ def register_user():
       201:
         description: User registered successfully
       400:
-        description: Missing required fields
+        description: Missing required fields or validation error
       409:
         description: Email already registered
       500:
@@ -109,6 +109,8 @@ def get_user_by_id(user_id):
         description: Forbidden (Not the owner and not an admin)
       404:
         description: User not found
+      500:
+        description: Internal server error
     """
     
     # Identity extraction from JWT Token
@@ -156,6 +158,8 @@ def delete_user(user_id):
         description: Forbidden (Not the owner and not an admin)
       404:
         description: User not found
+      500:
+        description: Internal server error
     """
 
     # Identity extraction from JWT Token
@@ -185,6 +189,42 @@ def delete_user(user_id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+
+# D. Retrieve Current Authenticated User Route
+@users_bp.route('/me', methods=['GET'])
+@jwt_required()
+def get_current_user():
+    """Get current authenticated user profile
+    ---
+    tags:
+      - Users
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Current user profile details
+      401:
+        description: Unauthorized (Missing or invalid token)
+      404:
+        description: User not found
+      500:
+        description: Internal server error
+    """
+    user_id = int(get_jwt_identity())
+
+    try:
+        user = Users.query.get(user_id)
+        if not user or not user.is_active:
+            return jsonify({"error": "Active user not found!"}), 404
+    
+        return jsonify({
+            "message": "Current user data successfully retrieved!",
+            "user": user.to_dict()
+        }), 200
+    
+    except SQLAlchemyError as e:
         print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return jsonify({"error": "A database error occurred processing your request."}), 500
 
@@ -221,6 +261,8 @@ def login():
         description: Missing email or password
       401:
         description: Invalid credentials
+      500:
+        description: Internal server error
     """
     data = request.get_json(silent=True) or {}
 
@@ -242,6 +284,9 @@ def login():
 
         if user.seller_profile:
             user.seller_profile.is_active = True
+
+            for product in user.seller_profile.products:
+                product.is_active = True
 
         db.session.commit()
         message = 'Login successful. Your account has been reactivated!'

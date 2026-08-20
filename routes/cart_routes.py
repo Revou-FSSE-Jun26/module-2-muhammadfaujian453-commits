@@ -218,7 +218,7 @@ def update_cart_item(product_id):
       400:
         description: Validation error or insufficient stock
       404:
-        description: Item not found in cart
+        description: Item not found in cart or product not found
       500:
         description: Internal server error
     """

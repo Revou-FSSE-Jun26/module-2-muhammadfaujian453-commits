@@ -45,7 +45,7 @@ def create_store():
       201:
         description: Store profile successfully created
       400:
-        description: Missing store_name or profile already exists
+        description: Validation error, missing store_name or profile already exists
       409:
         description: Store name is already taken by another user
       500:
@@ -115,6 +115,8 @@ def get_store_profile(seller_id):
         description: Store profile details
       404:
         description: Store not found or inactive
+      500:
+        description: Internal database error
     """
     try:
         store = Sellers.query.filter_by(id=seller_id, is_active=True).first()
@@ -162,6 +164,8 @@ def update_store():
     responses:
       200:
         description: Store profile updated successfully
+      400:
+        description: Validation error
       409:
         description: New store name is already taken
       500:

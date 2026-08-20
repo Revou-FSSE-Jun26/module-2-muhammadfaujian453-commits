@@ -5,8 +5,21 @@ from models import Products, Categories
 from auth import seller_required
 from validation import validate_product_data
 from sqlalchemy.exc import SQLAlchemyError
+import re
+import uuid
 
 product_bp = Blueprint('product', __name__, url_prefix='/products')
+
+# =========================================================================
+# HELPER FUNCTION: SLUG GENERATOR
+# =========================================================================
+def generate_unique_slug(name):
+    """Auto generate unique slug """
+    # Delete non-alfanumerik character, change space into slash, and change to lowercase
+    base_slug = re.sub(r'[^a-zA-Z0-9\s-]', '', name).strip().lower()
+    base_slug = re.sub(r'[-\s]+', '-', base_slug)
+    # Add 8 UUID character
+    return f"{base_slug}-{str(uuid.uuid4())[:8]}"
 
 # =========================================================================
 # PRODUCT MODULE (BLUEPRINT: product_bp | PREFIX: /products)
@@ -55,6 +68,8 @@ def create_product():
         description: Forbidden (Requires active seller profile)
       404:
         description: Category not found
+      500:
+        description: Internal server error
     """
     data = request.get_json(silent=True) or {}
     seller_id = int(get_jwt_identity())
@@ -73,11 +88,14 @@ def create_product():
     if not category:
         return jsonify({"error": f"Category with ID {category_id} not found!"}), 404
 
+    product_name = data.get('name')
+
     try:
         new_product = Products(
             category_id=category_id,
             seller_id=seller_id,
-            name=data.get('name'),
+            name=product_name,
+            slug=generate_unique_slug(product_name),
             description=data.get('description'),
             price=data.get('price'),
             stock=data.get('stock', 0),
@@ -97,7 +115,7 @@ def create_product():
 # B. Get all product list route
 @product_bp.route('', methods=['GET'])
 def get_products():
-    """Retrieve all active products with pagination
+    """Retrieve all active products with pagination and filters
     ---
     tags:
       - Products
@@ -113,18 +131,40 @@ def get_products():
       - in: query
         name: category_id
         type: integer
+      - in: query
+        name: name
+        type: string
+        description: Search product by name
+      - in: query
+        name: min_price
+        type: number
+      - in: query
+        name: max_price
+        type: number
     responses:
       200:
         description: A paginated list of products
+      500:
+        description: Internal server error
     """
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 10, type=int)
     category_id = request.args.get('category_id', type=int)
+    search_name = request.args.get('name', type=str)
+    min_price = request.args.get('min_price', type=float)
+    max_price = request.args.get('max_price', type=float)
 
     try:
         query = Products.query.filter_by(is_active=True)
+
         if category_id:
             query = query.filter_by(category_id=category_id)
+        if search_name:
+            query = query.filter(Products.name.ilike(f"%{search_name}%"))
+        if min_price is not None:
+            query = query.filter(Products.price >= min_price)
+        if max_price is not None:
+            query = query.filter(Products.price <= max_price)
 
         paginated_data = query.paginate(page=page, per_page=limit, error_out=False)
 
@@ -135,7 +175,9 @@ def get_products():
                 "current_page": paginated_data.page,
                 "total_pages": paginated_data.pages,
                 "total_items": paginated_data.total,
-                "items_per_page": paginated_data.per_page
+                "items_per_page": paginated_data.per_page,
+                "has_next": paginated_data.has_next, 
+                "has_prev": paginated_data.has_prev
             }
         }), 200
     
@@ -159,6 +201,10 @@ def get_product_by_id(product_id):
     responses:
       200:
         description: Product details
+      404:
+        description: Product not found or is no longer active
+      500:
+        description: Internal server error
     """
     try:
         product = Products.query.filter_by(id=product_id, is_active=True).first()
@@ -209,6 +255,14 @@ def update_product(product_id):
     responses:
       200:
         description: Product updated successfully
+      400:
+        description: Validation error
+      403:
+        description: Unauthorized user ID or seller ID
+      404:
+        description: Product not found or inactive
+      500:
+        description: Internal server error
     """
     data = request.get_json(silent=True) or {}
     seller_id = int(get_jwt_identity())
@@ -231,11 +285,19 @@ def update_product(product_id):
                 return jsonify({"error": f"Category ID {data.get('category_id')} not found!"}), 404
             product.category_id = data.get('category_id')
             
-        if 'name' in data: product.name = data.get('name')
-        if 'description' in data: product.description = data.get('description')
-        if 'price' in data: product.price = data.get('price')
-        if 'stock' in data: product.stock = data.get('stock')
-        if 'image_url' in data: product.image_url = data.get('image_url')
+        if 'name' in data:
+            new_name = data.get('name')
+            if new_name != product.name:
+                product.name = new_name
+                product.slug = generate_unique_slug(new_name)
+        if 'description' in data:
+            product.description = data.get('description')
+        if 'price' in data:
+            product.price = data.get('price')
+        if 'stock' in data:
+            product.stock = data.get('stock')
+        if 'image_url' in data:
+            product.image_url = data.get('image_url')
 
         db.session.commit()
 
@@ -266,6 +328,12 @@ def delete_product(product_id):
     responses:
       200:
         description: Product successfully deactivated
+      403:
+        description: Unauthorized user ID or seller ID
+      404:
+        description: Product not found or already deactivated
+      500:
+        description: Internal server error
     """
     seller_id = int(get_jwt_identity())
 

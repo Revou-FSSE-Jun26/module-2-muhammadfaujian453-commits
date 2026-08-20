@@ -29,7 +29,7 @@ def create_app():
     swagger = Swagger(app)
 
     # Import models
-    from models import Users, Sellers, Categories, Products, Orders
+    from models import Users, Sellers, Categories, Products, Orders, OrderItems
 
     # Import routes
     from routes.auth_routes import auth_bp, users_bp

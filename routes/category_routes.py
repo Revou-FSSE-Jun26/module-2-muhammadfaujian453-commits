@@ -137,6 +137,8 @@ def update_category(category_id):
     responses:
       200:
         description: Category updated
+      400:
+        description: Validation failed
       404:
         description: Category not found
       409:
@@ -167,7 +169,7 @@ def update_category(category_id):
                 duplicate_category = Categories.query.filter_by(name=new_name).first()
                 if duplicate_category:
                     return jsonify({"error": f"Category name '{new_name}' already exists!"}), 409
-            category.name = new_name
+                category.name = new_name
             
         if 'description' in data:
             category.description = new_description
