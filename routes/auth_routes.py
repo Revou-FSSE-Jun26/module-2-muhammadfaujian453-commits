@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from utils import db
 from models import Users
+from validation import validate_user_registration
 from sqlalchemy.exc import SQLAlchemyError
 
 # Blueprint
@@ -54,13 +55,14 @@ def register_user():
     """
     data = request.get_json(silent=True) or {}
 
+    validation_errors = validate_user_registration(data)
+    if validation_errors:
+        return jsonify({"error": "Validation failed", "details": validation_errors}), 400
+
     email = data.get('email')
     password = data.get('password')
     full_name = data.get('full_name')
     avatar_url = data.get('avatar_url')
-
-    if not email or not password or not full_name:
-        return jsonify({"error": "The email, password, and full_name fields are required!"}), 400
 
     existing_user = Users.query.filter_by(email=email).first()
     if existing_user:
@@ -80,10 +82,8 @@ def register_user():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
 
 
 # B. Retrieve Specific User Route
@@ -130,10 +130,8 @@ def get_user_by_id(user_id):
         }), 200
     
     except SQLAlchemyError as e:
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
 
 # C. Delete User Account Route
 @users_bp.route('/<int:user_id>', methods=['DELETE'])
@@ -187,10 +185,8 @@ def delete_user(user_id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database failure while deleting user account!",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
 
 # =========================================================================
 # 2. AUTH MODULE (BLUEPRINT: auth_bp | PREFIX: /auth)
@@ -226,7 +222,7 @@ def login():
       401:
         description: Invalid credentials
     """
-    data = request.get_json(silent=True) or ()
+    data = request.get_json(silent=True) or {}
 
     email = data.get('email')
     password = data.get('password')

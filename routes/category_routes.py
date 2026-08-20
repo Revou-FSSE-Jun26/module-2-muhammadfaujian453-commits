@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required
 from utils import db
 from models import Categories
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from validation import validate_category_data
 from auth import roles_required
 
 category_bp = Blueprint('category', __name__, url_prefix='/categories')
@@ -52,11 +53,16 @@ def create_category():
         description: Internal server error
     """
     data = request.get_json(silent=True) or {}
+
+    validation_errors = validate_category_data(data, is_update=False)
+    if validation_errors:
+        return jsonify({
+            "error": "Validation failed",
+            "details": validation_errors
+        }), 400
+
     name = data.get('name')
     description = data.get('description')
-    
-    if not name:
-        return jsonify({"error": "The category 'name' field is required!"}), 400
         
     existing_category = Categories.query.filter_by(name=name).first()
     if existing_category:
@@ -75,10 +81,8 @@ def create_category():
         
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database failure while creating category!",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
 
 # B. Retrieve all categories route
 @category_bp.route('', methods=['GET'])
@@ -101,10 +105,8 @@ def get_categories():
         }), 200
     
     except SQLAlchemyError as e:
-        return jsonify({
-            "error": "Failed to retrieve categories",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
 
 # C. Update category routes
 @category_bp.route('/<int:category_id>', methods=['PUT'])
@@ -143,6 +145,13 @@ def update_category(category_id):
         description: Internal server error
     """
     data = request.get_json(silent=True) or {}
+
+    validation_errors = validate_category_data(data, is_update=True)
+    if validation_errors:
+        return jsonify({
+            "error": "Validation failed",
+            "details": validation_errors
+        }), 400
     
     new_name = data.get('name')
     new_description = data.get('description')
@@ -152,10 +161,12 @@ def update_category(category_id):
         if not category:
             return jsonify({"error": "Category not found!"}), 404
 
-        if new_name and new_name != category.name:
-            duplicate_category = Categories.query.filter_by(name=new_name).first()
-            if duplicate_category:
-                return jsonify({"error": f"Category name '{new_name}' already exists on the system!"}), 409
+        if 'name' in data:
+            new_name = data.get('name')
+            if new_name != category.name:
+                duplicate_category = Categories.query.filter_by(name=new_name).first()
+                if duplicate_category:
+                    return jsonify({"error": f"Category name '{new_name}' already exists!"}), 409
             category.name = new_name
             
         if 'description' in data:
@@ -170,10 +181,8 @@ def update_category(category_id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
 
 # D. Delete category route
 @category_bp.route('/<int:category_id>', methods=['DELETE'])
@@ -219,7 +228,5 @@ def delete_category(category_id):
     
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500

@@ -119,10 +119,9 @@ def add_to_cart():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # B. Retrieve or vew cart route
 @cart_bp.route('', methods=['GET'])
@@ -184,10 +183,9 @@ def view_cart():
         }), 200
 
     except SQLAlchemyError as e:
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # C. Update cart route
 @cart_bp.route('/items/<int:product_id>', methods=['PUT'])
@@ -271,10 +269,9 @@ def update_cart_item(product_id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # D. Delete item from the cart
 @cart_bp.route('/items/<int:product_id>', methods=['DELETE'])
@@ -318,10 +315,9 @@ def delete_cart_item(product_id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # E. Delete/clear all item and its cart
 @cart_bp.route('', methods=['DELETE'])
@@ -352,7 +348,6 @@ def clear_cart():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error":"Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from utils import db
-from models import Orders, order_items, Carts, cart_items, Products
+from models import Orders, OrderItems, Carts, cart_items, Products
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import insert, delete
 
@@ -46,7 +46,7 @@ def checkout():
     user_id = int(get_jwt_identity())
     shipping_address = data.get('shipping_address')
 
-    if not shipping_address or not str(shipping_address).strip:
+    if not shipping_address or not str(shipping_address).strip():
         return jsonify({"error": "The 'shipping_address' field is required!"}), 400
 
     try:
@@ -60,10 +60,13 @@ def checkout():
 
         new_order = Orders(
             user_id=user_id,
-            shipping_address=shipping_address
+            shipping_address=shipping_address,
+            total_amount=0
         )
         db.session.add(new_order)
         db.session.flush()
+
+        total_order_price = 0
 
         for item in items:
             product = Products.query.with_for_update().filter_by(id=item.product_id, is_active=True).first()
@@ -78,6 +81,10 @@ def checkout():
 
             product.stock -= item.quantity
 
+            subtotal = float(product.price) * item.quantity
+            total_order_price += subtotal
+
+
             stmt = insert(order_items).values(
                 order_id=new_order.id,
                 product_id=product.id,
@@ -86,9 +93,10 @@ def checkout():
             )
             db.session.execute(stmt)
 
+        new_order.total_amount = total_order_price
+
         del_stmt = delete(cart_items).where(cart_items.c.cart_id == cart.id)
         db.session.execute(del_stmt)
-
         db.session.commit()
 
         return jsonify({
@@ -98,10 +106,8 @@ def checkout():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error":"Database error during checkout",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
 
 # B. Retrieve all order that placed by current user
 @order_bp.route('', methods=['GET'])
@@ -127,10 +133,8 @@ def get_my_orders():
         }), 200
         
     except SQLAlchemyError as e:
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
 
 # C. Get specific order details and its item
 @order_bp.route('/<int:order_id>', methods=['GET'])
@@ -168,12 +172,16 @@ def get_order_details(order_id):
             return jsonify({"error": "Unauthorized! You can only view your own orders."}), 403
 
         # Snapshot current price
-        items_data = db.session.query(
-            order_items.c.quantity,
-            order_items.c.unit_price,
-            Products.name
-        ).join(Products, Products.id == order_items.c.product_id)\
-         .filter(order_items.c.order_id == order_id).all()
+        items_data = (
+            db.session.query(
+                order_items.c.quantity,
+                order_items.c.unit_price,
+                Products.name
+            )
+            .join(Products, Products.id == order_items.c.product_id)
+            .filter(order_items.c.order_id == order_id)
+            .all()
+        )
 
         details = []
         total_order_price = 0
@@ -198,10 +206,9 @@ def get_order_details(order_id):
         }), 200
 
     except SQLAlchemyError as e:
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # D. Update order status route
 @order_bp.route('/<int:order_id>/status', methods=['PUT'])
@@ -282,7 +289,6 @@ def update_order_status(order_id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        

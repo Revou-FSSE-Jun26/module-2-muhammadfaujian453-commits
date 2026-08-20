@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils import db
 from models import Sellers, Products
 from sqlalchemy.exc import SQLAlchemyError
+from validation import validate_store_data
 from auth import seller_required
 
 # Blueprint
@@ -53,13 +54,17 @@ def create_store():
 
     data = request.get_json(silent=True) or {}
     user_id =int(get_jwt_identity())
+
+    validation_errors = validate_store_data(data, is_update=False)
+    if validation_errors:
+        return jsonify({
+            "error": "Validation failed",
+            "details": validation_errors
+        }), 400
     
     store_name = data.get('store_name')
     store_description = data.get('store_description')
     avatar_url = data.get('avatar_url')
-
-    if not store_name:
-        return jsonify({"error": "The 'store_name' field is required!"}), 400
 
     existing_store = Sellers.query.get(user_id)
     if existing_store:
@@ -88,10 +93,9 @@ def create_store():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database failure",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # B. Get store by seller ID route
 @seller_bp.route('/<int:seller_id>', methods=['GET'])
@@ -124,7 +128,9 @@ def get_store_profile(seller_id):
         }), 200
 
     except SQLAlchemyError as e:
-        return jsonify({"error": "Database error", "details": str(e.__dict__.get('orig', e))}), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # C. Update store route
 @seller_bp.route('', methods=['PUT'])
@@ -163,6 +169,13 @@ def update_store():
     """
     data = request.get_json(silent=True) or {}
     user_id = int(get_jwt_identity())
+
+    validation_errors = validate_store_data(data, is_update=True)
+    if validation_errors:
+        return jsonify({
+            "error": "Validation failed",
+            "details": validation_errors
+        }), 400
     
     try:
         store = Sellers.query.get(user_id)
@@ -191,7 +204,9 @@ def update_store():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"error": "Database error", "details": str(e.__dict__.get('orig', e))}), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # D. Delete/close store route
 @seller_bp.route('', methods=['DELETE'])
@@ -231,4 +246,6 @@ def close_store():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"error": "Database error", "details": str(e.__dict__.get('orig', e))}), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        

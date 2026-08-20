@@ -1,4 +1,5 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
 from sqlalchemy.exc import SQLAlchemyError
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -10,6 +11,7 @@ from utils import db
 def create_app():
     print("Initializing the Flask application...")
     app = Flask(__name__)
+    CORS(app)
 
     # Load configuration from config.py
     app.config.from_object(Config)

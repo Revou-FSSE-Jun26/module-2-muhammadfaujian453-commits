@@ -90,10 +90,9 @@ def create_product():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database failure",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
     
 # B. Get all product list route
 @product_bp.route('', methods=['GET'])
@@ -141,10 +140,9 @@ def get_products():
         }), 200
     
     except SQLAlchemyError as e:
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # C. Get specific product by its ID route
 @product_bp.route('/<int:product_id>', methods=['GET'])
@@ -170,7 +168,9 @@ def get_product_by_id(product_id):
         return jsonify({"message": "Product retrieved successfully", "product": product.to_dict()}), 200
 
     except SQLAlchemyError as e:
-        return jsonify({"error": "Database error"}), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # D. Update product route
 @product_bp.route('/<int:product_id>', methods=['PUT'])
@@ -243,10 +243,9 @@ def update_product(product_id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({
-            "error": "Database error",
-            "details": str(e.__dict__.get('orig', e))
-        }), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        
 
 # E. Delete product route
 @product_bp.route('/<int:product_id>', methods=['DELETE'])
@@ -285,4 +284,6 @@ def delete_product(product_id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return jsonify({"error": "A database error occurred processing your request."}), 500
+        

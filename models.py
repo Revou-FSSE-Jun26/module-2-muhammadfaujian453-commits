@@ -15,17 +15,6 @@ cart_items = db.Table(
     db.CheckConstraint('quantity > 0', name='cart_items_quantity_check')
 )
 
-# 2. order_items Table
-order_items = db.Table(
-    'order_items',
-    db.Column('order_id', db.BigInteger, db.ForeignKey('orders.id', ondelete='CASCADE'), primary_key=True),
-    db.Column('product_id', db.BigInteger, db.ForeignKey('products.id', ondelete='RESTRICT'), primary_key=True),
-    db.Column('quantity', db.Integer, nullable=False),
-    db.Column('unit_price', db.Numeric(12, 2), nullable=False),
-    db.CheckConstraint('quantity > 0', name='order_items_quantity_check'),
-    db.CheckConstraint('unit_price >= 0', name='order_items_unit_price_check')
-)
-
 # =========================================================================
 # 1. MODEL USER
 # =========================================================================
@@ -150,6 +139,7 @@ class Products(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id', ondelete='RESTRICT'), nullable = False)
     seller_id = db.Column(db.BigInteger, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False)
     name = db.Column(db.String(255),nullable = False)
+    slug = db.Column(db.String(255), unique=True, nullable=False)
     description = db.Column(db.Text)
     price = db.Column(db.Numeric(12, 2), nullable = False)
     stock = db.Column(db.Integer, nullable = False, server_default = '0')
@@ -178,6 +168,7 @@ class Products(db.Model):
             "category_id": self.category_id,
             "seller_id": self.seller_id,
             "name": self.name,
+            "slug": self.slug,
             "description": self.description,
             "price": float(self.price) if self.price is not None else 0.0,
             "stock": self.stock,
@@ -222,6 +213,7 @@ class Orders(db.Model):
     # Generate Column and it's Criteria
     id = db.Column(db.BigInteger, primary_key = True)
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='RESTRICT'), nullable = False)
+    seller_id = db.Column(db.BigInteger, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False)
     status = db.Column(
         db.Enum('pending', 'processing', 'shipped','delivered' ,'canceled', name='order_logistics_status'),
         nullable = False,
@@ -235,12 +227,7 @@ class Orders(db.Model):
 
     # Relationship between Table
     buyer = db.relationship('Users', back_populates = 'orders', lazy = 'joined')
-    products = db.relationship(
-        'Products',
-        secondary = order_items,
-        lazy = 'selectin',
-        backref=db.backref('orders', lazy='selectin')
-    )
+    seller = db.relationship('Sellers', backref=db.backref('store_orders', lazy='selectin'), lazy='joined')
 
     # Constraint for Column
     __table_args__ = (
@@ -252,9 +239,38 @@ class Orders(db.Model):
         return {
             "id": self.id,
             "user_id": self.user_id,
+            "seller_id": self.seller_id,
             "status": self.status,
             "total_amount": float(self.total_amount) if self.total_amount is not None else 0.0,
             "shipping_address": self.shipping_address,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class OrderItems(db.Model):
+    __tablename__ = 'order_items'
+    
+    # Composite Primary Key
+    order_id = db.Column(db.BigInteger, db.ForeignKey('orders.id', ondelete='CASCADE'), primary_key=True)
+    product_id = db.Column(db.BigInteger, db.ForeignKey('products.id', ondelete='RESTRICT'), primary_key=True)
+    
+    quantity = db.Column(db.Integer, nullable=False)
+    unit_price = db.Column(db.Numeric(12, 2), nullable=False)
+
+    # Constraint for Column
+    __table_args__ = (
+        db.CheckConstraint('quantity > 0', name='order_items_quantity_check'),
+        db.CheckConstraint('unit_price >= 0', name='order_items_unit_price_check')
+    )
+
+    # Relationship between Table
+    product = db.relationship('Products', lazy='joined')
+
+    def to_dict(self):
+        return {
+            "product_id": self.product_id,
+            "product_name": self.product.name if self.product else "Unknown Product",
+            "quantity": self.quantity,
+            "unit_price": float(self.unit_price),
+            "subtotal": float(self.unit_price) * self.quantity
         }
