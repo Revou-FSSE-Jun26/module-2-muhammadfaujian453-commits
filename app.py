@@ -8,13 +8,16 @@ from flasgger import Swagger
 from config import Config
 from utils import db
 
-def create_app():
+def create_app(test_config=None):
     print("Initializing the Flask application...")
     app = Flask(__name__)
     CORS(app)
 
     # Load configuration from config.py
     app.config.from_object(Config)
+
+    if test_config:
+        app.config.update(test_config)
 
     # Initializing db with application
     db.init_app(app)
@@ -25,8 +28,21 @@ def create_app():
     # Initializing JWT
     jwt = JWTManager(app)
 
+
+    
+    swagger_template = {
+        "securityDefinitions": {
+            "Bearer": {
+                "type": "apiKey",
+                "name": "Authorization",
+                "in": "header",
+                "description": "Ketik 'Bearer ' diikuti dengan spasi lalu token JWT Anda.\n\nContoh: 'Bearer eyJhbGci...'"
+            }
+        }
+    }
+
     # Initializing Swagger
-    swagger = Swagger(app)
+    swagger = Swagger(app, template=swagger_template)
 
     # Import models
     from models import Users, Sellers, Categories, Products, Orders, OrderItems

@@ -47,7 +47,7 @@ def register_user():
       201:
         description: User registered successfully
       400:
-        description: Missing required fields or validation error
+        description: Bad request (Missing required fields or validation error)
       409:
         description: Email already registered
       500:
@@ -105,6 +105,8 @@ def get_user_by_id(user_id):
     responses:
       200:
         description: User profile details
+      401:
+        description: Unaouthorized (Invalid or missing token)
       403:
         description: Forbidden (Not the owner and not an admin)
       404:
@@ -154,6 +156,8 @@ def delete_user(user_id):
     responses:
       200:
         description: Account successfully deactivated
+      401:
+        description: Unauthorized (Invalid or missing token)
       403:
         description: Forbidden (Not the owner and not an admin)
       404:

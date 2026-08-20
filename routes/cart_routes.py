@@ -51,9 +51,11 @@ def add_to_cart():
       200:
         description: Item successfully added to cart
       400:
-        description: Validation error or insufficient stock
+        description: Bad request (Validation error or insufficient stock)
+      401:
+        description: Unauthorized (Invalid or missing token)
       403:
-        description: Forbidden (Cannot buy own product)
+        description: Forbidden (Cannot buy your own product)
       404:
         description: Product not found or inactive
       500:
@@ -136,6 +138,8 @@ def view_cart():
     responses:
       200:
         description: Cart details retrieved successfully
+      401:
+        description: Unauthorized (Invalid or missing token)
       500:
         description: Internal server error
     """
@@ -216,7 +220,9 @@ def update_cart_item(product_id):
       200:
         description: Cart item updated successfully
       400:
-        description: Validation error or insufficient stock
+        description: Bad request (Validation error or insufficient stock)
+      401:
+        description: Unauthorized (Invalid or missing token)
       404:
         description: Item not found in cart or product not found
       500:
@@ -291,6 +297,8 @@ def delete_cart_item(product_id):
     responses:
       200:
         description: Item removed from cart
+      401:
+        description: Unauthorized (Invalid or missing token)
       404:
         description: Item not found in cart
       500:
@@ -332,6 +340,8 @@ def clear_cart():
     responses:
       200:
         description: Cart cleared successfully
+      401:
+        escription: Unauthorized (Invalid or missing token)
       500:
         description: Internal server error
     """

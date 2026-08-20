@@ -37,7 +37,7 @@ def create_store():
               example: "Toko Angkasa Elektrik"
             store_description:
               type: string
-              example: "Distributor utama panel dan komponen kelistrikan"
+              example: "Electrical component distributor"
             avatar_url:
               type: string
               example: "https://example.com/logo.png"
@@ -46,6 +46,8 @@ def create_store():
         description: Store profile successfully created
       400:
         description: Validation error, missing store_name or profile already exists
+      401:
+        description: Unauthorized (Invalid or missing token)
       409:
         description: Store name is already taken by another user
       500:
@@ -166,6 +168,10 @@ def update_store():
         description: Store profile updated successfully
       400:
         description: Validation error
+      401:
+        description: Unauthorized (Invalid or missing token)
+      403:
+        description: Forbidden (Requires active seller profile)
       409:
         description: New store name is already taken
       500:
@@ -226,6 +232,10 @@ def close_store():
     responses:
       200:
         description: Store and its products successfully deactivated
+      401:
+        description: Unauthorized (Invalid or missing token)
+      403:
+        description: Forbidden (Requires active seller profile)
       500:
         description: Internal server error
     """

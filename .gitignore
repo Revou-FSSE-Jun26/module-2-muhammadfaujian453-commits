@@ -1,26 +1,36 @@
-# --- Sistem Operasi ---
+# --- OS Generated files ---
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 
 # --- IDE & Database Tools ---
 .vscode/
 .dbeaver/
 
 # --- Environment & Secrets ---
+venv/
+env/
 .env
 .flaskenv
 
-# --- Python Virtual Environment ---
-venv/
-
 # --- Python Bytecode & Compiled Files ---
 __pycache__/
+*.py[cod]
+*$py.class
 *.pyc
 *.pyo
 
-# --- Flask & Data Lokal ---
-# Mengabaikan hierarki konfigurasi lokal Flask dan binari database
+# --- Pytest & Coverage ---
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Flask & Local Database ---
 instance/
 *.sqlite3
+*.sqlite
 *.db
 
 # --- Logs ---

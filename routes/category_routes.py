@@ -34,10 +34,10 @@ def create_category():
           properties:
             name:
               type: string
-              example: "Elektronik"
+              example: "Electronic"
             description:
               type: string
-              example: "Komponen panel dan kabel listrik"
+              example: "Electrical component"
     responses:
       201:
         description: Category successfully created
@@ -139,6 +139,10 @@ def update_category(category_id):
         description: Category updated
       400:
         description: Validation failed
+      401:
+        description: Unauthorized (Invalid or missing token)
+      403:
+        description: Forbidden (Admin role required)
       404:
         description: Category not found
       409:
@@ -205,6 +209,10 @@ def delete_category(category_id):
     responses:
       200:
         description: Category deleted
+      401:
+        description: Unauthorized (Invalid or missing token)
+      403:
+        description: Forbidden (Admin role required)
       404:
         description: Category not found
       409:

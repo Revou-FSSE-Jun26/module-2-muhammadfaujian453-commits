@@ -1,87 +1,106 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/wGq_UtnU)
+# Multi-Vendor E-Commerce API
+
+## 📖 Overview
+This repository contains a robust, scalable backend API designed for a multi-tenant e-commerce platform. Built with Python and Flask, it utilizes a single-database configuration for Flask using PostgreSQL and SQLAlchemy. The architecture enforces strict domain boundaries, separating buyers, sellers, and system administrators, making it a highly structured foundation for complex marketplace operations.
+
+## ✨ Core Architectural Features
+*   **Split-Order Checkout System:** Intelligently dissects a single user cart into multiple isolated orders based on distinct seller IDs, ensuring accurate logistics and financial segregation.
+*   **Role-Based Access Control (RBAC):** Secures endpoints using JWT authentication, strictly restricting data mutation operations based on user roles (Admin, Seller, Buyer).
+*   **Resilient Data Management:** Implements comprehensive soft-deletion mechanisms across users, stores, and products to maintain referential integrity without destroying historical transaction data.
+*   **Dynamic Data Filtering:** Provides robust product discovery through dynamic querying (price ranges, category IDs, text search) combined with offset pagination.
+*   **Automated Slug Generation:** Prevents URL collisions by automatically generating unique, SEO-friendly product slugs embedded with UUIDs.
+
+## 🧠 Business Logic & System Workflows
+
+### 1. The Split-Order Architecture
+When a buyer places items from multiple different sellers into a single cart and initiates a checkout, the system does not create a monolithic order. Instead, the transaction engine groups the cart items by `seller_id`. It then generates distinct, independent `Order` records for each seller. This allows each seller to update their logistics status independently without interfering with other sellers' fulfillment processes.
+
+### 2. Cascading Soft-Deletion
+To preserve financial audit trails and prevent `IntegrityError` on foreign keys, records are rarely hard-deleted. 
+* If a User is deleted, their account is flagged as inactive.
+* If that User is also a Seller, the `Sellers` profile is deactivated.
+* Subsequently, all `Products` belonging to that seller are automatically pulled from the public catalog via an `is_active=False` flag. 
+* Previous `Orders` involving these deleted entities remain perfectly intact for bookkeeping.
 
 ---
 
-# CHECKPOINT 1
+## 🗄️ Database Schema
 
-## RevoShop Database Architecture
+### Entity Relationship Diagram (ERD)
+> **Note:** Below is the visual representation of the database schema.
+> 
+> *[`![Database ERD](./assets/diagram.png)`]*
 
-Repositori ini berisi rancangan skema basis data, data sampel (seeding), dan kueri operasional untuk sistem e-commerce RevoShop. Proyek ini mendemonstrasikan implementasi *Data Definition Language* (DDL) dan *Data Manipulation Language* (DML) menggunakan PostgreSQL.
+### Table Structure
+The database is heavily normalized to ensure data integrity across the marketplace.
 
-## 📊 Dokumentasi Visual & Skema
-
-Berikut adalah hasil eksekusi dan visualisasi dari basis data RevoShop:
-
-**1. Diagram Relasi Tabel (Bagian 1)**
-![Diagram Tabel 1](./assets/DiagramCP1/diagramtable1.png)
-
-**2. Diagram Relasi Tabel (Bagian 2)**
-![Diagram Tabel 2](./assets/DiagramCP1/diagramtable2.png)
-
-**3. Diagram Relasi Tabel (Bagian 3)**
-![Diagram Tabel 3](./assets/DiagramCP1/diagramtable3.png)
-
-## 🗄️ Struktur Tabel
-Skema ini mengimplementasikan desain relasional yang dinormalisasi dengan 5 tabel utama:
-
-1. **`users`**: Entitas pengguna yang menggunakan kredensial email (dilindungi dengan algoritma *hash password*).
-2. **`categories`**: Tabel *master* (referensi) untuk hierarki klasifikasi produk.
-3. **`products`**: Entitas barang dagangan, dihubungkan secara spesifik ke tabel `categories` (Relasi 1:N). Menggunakan *constraint* `CHECK` untuk memastikan harga dan stok tidak bernilai negatif.
-4. **`orders`**: Tabel *header* transaksi (Relasi 1:N dari `users`), memanfaatkan *custom type* ENUM untuk integritas status pesanan (`PENDING`, `PAID`, `SHIPPED`, `CANCELED`).
-5. **`order_items`**: *Junction table* (Relasi M:N antara `orders` dan `products`). Menggunakan *Composite Primary Key* untuk mencegah duplikasi pemuatan produk yang sama dalam satu ID pesanan, serta menangkap data harga historis (*unit_price*) pada saat transaksi terjadi.
-
-## ⚙️ Local Database Setup (PostgreSQL)
-Untuk menjalankan dan menguji skema ini secara lokal pada komputer Anda, ikuti langkah berikut:
-
-1. Buka aplikasi *database client* (seperti DBeaver atau pgAdmin).
-2. Buat database lokal baru bernama `revoshop`.
-3. Buka *SQL Editor* pada database `revoshop` tersebut.
-4. Eksekusi file SQL dengan urutan yang ketat berikut:
-   - Jalankan `schema.sql` untuk membangun seluruh tabel, *custom type*, dan batasan (*constraint*).
-   - Jalankan `seed.sql` untuk memuat data sampel yang realistis ke dalam tabel.
-5. Gunakan `queries.sql` untuk memverifikasi fungsionalitas dan logika ekstraksi data, yang secara khusus mendemonstrasikan hierarki penggunaan klausa `WHERE`, `ORDER BY`, dan `LIMIT`.
+| Table Name | Primary Purpose | Key Relationships |
+| :--- | :--- | :--- |
+| **`users`** | Central identity management and authentication. | 1:1 with `sellers`, 1:1 with `carts`, 1:M with `orders`. |
+| **`sellers`** | Store profiles for users who register to sell. | PK is an FK to `users.id`. 1:M with `products`. |
+| **`categories`** | Master data for product classification. | 1:M with `products`. |
+| **`products`** | Inventory catalog with auto-generated slugs. | Belongs to `categories` and `sellers`. |
+| **`carts` & `cart_items`** | Temporary states for pre-checkout items. | M:N association between `users` and `products`. |
+| **`orders` & `order_items`**| Immutable transaction records (Aggregate Root). | Bridges `users` (buyer) and `sellers`. |
 
 ---
 
-# CHECKPOINT 2
+## 🚀 Installation & Initialization
 
-## Flask API & ORM Integration
-
-Bagian ini mendemonstrasikan evolusi sistem dari eksekusi SQL mentah menjadi arsitektur *back-end* berbasis Python menggunakan **Flask**. Aplikasi telah direstrukturisasi ke dalam format yang modular dengan pemisahan yang jelas antara model database (`models.py`), jalur API (`routes.py`), dan konfigurasi (*app setup*). 
-
-Interaksi database kini dikendalikan sepenuhnya melalui **SQLAlchemy ORM** dengan koneksi yang mengarah ke database `revoshop_db`. Selain itu, manajemen evolusi skema tabel (seperti penambahan kolom `role` pada tabel pengguna secara inkremental tanpa merusak data yang ada) dikelola dengan aman menggunakan **Flask-Migrate**.
-
-### 🔗 API Testing Link
-- **Postman Collection:** [https://web.postman.co/workspace/My-Workspace~ff8df842-4d12-48cf-86dd-d55ead636fe1/collection/57331440-d66dfa0a-4d06-4890-9f9e-0c63221f0ca9?action=share&source=copy-link&creator=57331440]
-
-### 📸 Bukti Pengujian (Local Demo & Database Evidence)
-
-**1. Demo Evidence**
-*Tangkapan layar pengujian rute API berjalan secara lokal.*
-- **Screenshot of POST Users**
-  ![POST User](./assets/PostmanCP2/PostUser.png)
-- **Screenshot of GET User by its ID**
-  ![GET User by ID](./assets/PostmanCP2/GetUserbyID-Success.png)
-  ![GET User by ID](./assets/PostmanCP2/GetUserbyID-Error.png)
-- **Screenshot of GET all products**
-  ![GET ALL Products](./assets/PostmanCP2/GetAllProducts.png)
-- **Screenshot of GET products by its ID**
-  ![GET Product by ID](./assets/PostmanCP2/GetProductbyID-Success.png)
-  ![GET Product by ID](./assets/PostmanCP2/GetProductbyID-Error.png)
-
-*(Catatan: Bukti pengujian untuk rute dan skenario lainnya secara lengkap tercantum dan dapat dilihat langsung melalui tautan Postman Workspace yang telah disertakan di atas).*
-
-**2. DBeaver Evidence**
-*Tangkapan layar validasi skema, relasi, dan hasil migrasi pada database.*
-- **Screenshot Public Diagram**
-  ![Public Diagram](./assets/DBeaverCP2/Public_Diagram.png)
-- **Screenshot Role Column**
-  ![Role Column](./assets/DBeaverCP2/Role_Column.png)
-- **Screenshot Order_Items Diagram**
-  ![Order Items Diagram](./assets/DBeaverCP2/Order_Items_Diagram.png)
-- **Screenshot Order_Items ForeignKey**
-  ![Order Items ForeignKey](./assets/DBeaverCP2/Order_Items.png)
+1. Clone the repository and navigate to the root directory.
+2. Initialize and activate a Python virtual environment.
+3. Install the necessary dependencies:
+   ```bash
+   pip install -r requirements.txt
+4. Configure your `.env` file with the required environment variables:
+   ```env
+   SQLALCHEMY_DATABASE_URI=postgresql://user:password@localhost:5432/your_db
+   JWT_SECRET_KEY=your_secure_secret_key
+   ```
+5. Apply the schema migrations to your PostgreSQL database:
+   ```bash
+   flask db upgrade
+   ```
+6. Populate the database with a pre-configured testing environment:
+   ```bash
+   python seed.py
+   ```
 
 ---
 
-# CHECKPOINT 3
+## 🧪 API Endpoints & Testing Matrix
+
+This system is thoroughly documented using **Flasgger**. Navigate to `/apidocs` when the server is running to interact with the Swagger UI. 
+
+Below is the testing matrix covering all core functionalities. 
+> *[Add hyperlinks to Postman screenshot proofs]*
+
+### 1. Authentication & Users (`/auth`, `/users`)
+| Method | Endpoint | Description | Testing Criteria | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/auth/register` | Register a new user | Validates duplicate emails. | [PASS] |
+| `POST` | `/auth/login` | Authenticate & get JWT | Validates credentials, reactivates soft-deleted accounts. | [PASS] |
+| `GET` | `/users/me` | Get current identity | Successfully extracts data from JWT. | [PASS] |
+| `DELETE`| `/users/{id}` | Deactivate account | Triggers cascade soft-delete for sellers and products. | [PASS] |
+
+### 2. Store Management (`/sellers`)
+| Method | Endpoint | Description | Testing Criteria | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/sellers` | Register a store | Restricts 1 store per user, validates duplicate store names. | [PASS] |
+| `PUT` | `/sellers` | Update store profile | Ensures only the owner can update. | [PASS] |
+
+### 3. Catalog Management (`/categories`, `/products`)
+| Method | Endpoint | Description | Testing Criteria | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/categories` | Create category | Protected by `@roles_required('admin')`. | [PASS] |
+| `GET` | `/products` | List all products | Tests dynamic filters (name, category, min/max price) & pagination. | [PASS] |
+| `POST` | `/products` | Add new product | Auto-generates UUID slug, validates stock/price constraints. | [PASS] |
+| `PUT` | `/products/{id}` | Update product | Regenerates slug ONLY if the product name is changed. | [PASS] |
+
+### 4. Cart & Checkout (`/carts`, `/orders`)
+| Method | Endpoint | Description | Testing Criteria | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/carts/items` | Add to cart | Prevents sellers from buying their own products, checks stock. | [PASS] |
+| `POST` | `/orders/checkout` | Process transaction | Successfully splits 1 cart into multiple distinct seller orders. | [PASS] |
+| `GET` | `/orders` | Get user orders | Properly filters order history by `?status=pending/shipped`. | [PASS] |
+| `PUT` | `/orders/{id}/status`| Update logistics | Admins can update anything. Sellers manage shipping. Buyers can only cancel. | [PASS] |

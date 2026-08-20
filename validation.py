@@ -3,12 +3,24 @@ import re
 # Helper Function for validate user registration
 def validate_user_registration(data):
     errors = {}
-    if not data.get('username') or len(str(data.get('username')).strip()) < 3:
-        errors['username'] = "Must be at least 3 characters long."
-    if not data.get('email') or not re.match(r"[^@]+@[^@]+\.[^@]+", str(data.get('email'))):
-        errors['email'] = "Must be a valid email format."
-    if not data.get('password') or len(str(data.get('password'))) < 6:
-        errors['password'] = "Must be at least 6 characters long."
+    email = data.get('email')
+    if not email:
+        errors['email'] = 'Email is required.'
+    elif not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        errors['email'] = 'Invalid email format.'
+        
+    password = data.get('password')
+    if not password:
+        errors['password'] = 'Password is required.'
+    elif len(password) < 6:
+        errors['password'] = 'Password must be at least 6 characters long.'
+        
+    full_name = data.get('full_name')
+    if not full_name:
+        errors['full_name'] = 'Full_name is required.'
+    elif len(full_name.strip()) < 3:
+        errors['full_name'] = 'Full_name must be at least 3 characters long.'
+        
     return errors
 
 # Helper Function for validate category

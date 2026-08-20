@@ -9,8 +9,8 @@ from auth import hash_password, check_password
 # 1. cart_items Table
 cart_items = db.Table(
     'cart_items',
-    db.Column('cart_id', db.BigInteger, db.ForeignKey('carts.id', ondelete='CASCADE'), primary_key=True),
-    db.Column('product_id', db.BigInteger, db.ForeignKey('products.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('cart_id', db.Integer, db.ForeignKey('carts.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('product_id', db.Integer, db.ForeignKey('products.id', ondelete='CASCADE'), primary_key=True),
     db.Column('quantity', db.Integer, nullable=False, default=1),
     db.CheckConstraint('quantity > 0', name='cart_items_quantity_check')
 )
@@ -22,7 +22,7 @@ class Users(db.Model):
     __tablename__ = 'users'
 
     # Generate Column and it's Criteria
-    id = db.Column(db.BigInteger, primary_key = True)
+    id = db.Column(db.Integer, primary_key = True)
     email = db.Column(db.String(255), nullable = False, unique = True)
     password_hash = db.Column(db.String(255), nullable = False)
     full_name = db.Column(db.String(100), nullable = False)
@@ -38,7 +38,7 @@ class Users(db.Model):
     role = db.Column(
         db.Enum('admin', 'user', name='system_role'), 
         nullable = False, 
-        server_default = "'user'"
+        server_default = "user"
     )
 
     # Relationship between Table
@@ -74,7 +74,7 @@ class Sellers(db.Model):
     __tablename__ = 'sellers'
 
     # Generate Column and it's Criteria
-    id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key = True)
+    id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key = True)
     store_name = db.Column(db.String(100), nullable = False, unique = True)
     store_description = db.Column(db.Text)
     avatar_url = db.Column(db.String(255), nullable = True)
@@ -135,9 +135,9 @@ class Products(db.Model):
     __tablename__ = 'products'
 
     # Generate Column and it's Criteria
-    id = db.Column(db.BigInteger, primary_key = True)
+    id = db.Column(db.Integer, primary_key = True)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id', ondelete='RESTRICT'), nullable = False)
-    seller_id = db.Column(db.BigInteger, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False)
+    seller_id = db.Column(db.Integer, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False)
     name = db.Column(db.String(255),nullable = False)
     slug = db.Column(db.String(255), unique=True, nullable=False)
     description = db.Column(db.Text)
@@ -185,8 +185,8 @@ class Carts(db.Model):
     __tablename__ = 'carts'
 
     # Generate Column and it's Criteria
-    id = db.Column(db.BigInteger, primary_key=True)
-    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
 
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), onupdate=db.func.now())
@@ -211,9 +211,9 @@ class Orders(db.Model):
     __tablename__ = 'orders'
 
     # Generate Column and it's Criteria
-    id = db.Column(db.BigInteger, primary_key = True)
-    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='RESTRICT'), nullable = False)
-    seller_id = db.Column(db.BigInteger, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False)
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='RESTRICT'), nullable = False)
+    seller_id = db.Column(db.Integer, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False)
     status = db.Column(
         db.Enum('pending', 'processing', 'shipped','delivered' ,'cancelled', name='order_logistics_status'),
         nullable = False,
@@ -251,8 +251,8 @@ class OrderItems(db.Model):
     __tablename__ = 'order_items'
     
     # Composite Primary Key
-    order_id = db.Column(db.BigInteger, db.ForeignKey('orders.id', ondelete='CASCADE'), primary_key=True)
-    product_id = db.Column(db.BigInteger, db.ForeignKey('products.id', ondelete='RESTRICT'), primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id', ondelete='RESTRICT'), primary_key=True)
     
     quantity = db.Column(db.Integer, nullable=False)
     unit_price = db.Column(db.Numeric(12, 2), nullable=False)

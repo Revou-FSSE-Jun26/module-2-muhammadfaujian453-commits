@@ -64,6 +64,8 @@ def create_product():
         description: Product successfully created
       400:
         description: Validation error
+      401:
+        description: Unauthorized (Invalid or missing token)
       403:
         description: Forbidden (Requires active seller profile)
       404:
@@ -257,8 +259,10 @@ def update_product(product_id):
         description: Product updated successfully
       400:
         description: Validation error
+      401:
+        description: Unauthorized (Invalid or missing token)
       403:
-        description: Unauthorized user ID or seller ID
+        description: Forbidden (Unauthorized user ID or seller profile)
       404:
         description: Product not found or inactive
       500:
@@ -328,8 +332,10 @@ def delete_product(product_id):
     responses:
       200:
         description: Product successfully deactivated
+      401:
+        description: Unauthorized (Invalid or missing token)
       403:
-        description: Unauthorized user ID or seller ID
+        description: Forbidden (Unauthorized user ID or seller profile)
       404:
         description: Product not found or already deactivated
       500:

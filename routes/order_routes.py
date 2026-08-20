@@ -36,7 +36,9 @@ def checkout():
       201:
         description: Order successfully created
       400:
-        description: Cart is empty or validation error
+        description: Bad request (Cart is empty or validation error)
+      401:
+        description: Unauthorized (Invalid or missing token)
       404:
         description: Cart not found
       500:
@@ -140,6 +142,8 @@ def get_my_orders():
     responses:
       200:
         description: List of user's orders
+      401:
+        description: Unauthorized (Invalid or missing token)
       500:
         description: Internal server error
     """
@@ -182,6 +186,8 @@ def get_order_details(order_id):
     responses:
       200:
         description: Order details
+      401:
+        description: Unauthorized (Invalid or missing token)
       403:
         description: Forbidden (Not the buyer or seller)
       404:
@@ -242,6 +248,8 @@ def update_order_status(order_id):
         description: Status successfully updated
       400:
         description: Invalid status transition
+      401:
+        description: Unauthorized (Invalid or missing token)
       403:
         description: Forbidden action
       404:
