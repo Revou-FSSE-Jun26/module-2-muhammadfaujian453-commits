@@ -136,7 +136,7 @@ def get_my_orders():
       - in: query
         name: status
         type: string
-        enum: [pending, processing, shipped, delivered, canceled]
+        enum: [pending, processing, shipped, delivered, cancelled]
     responses:
       200:
         description: List of user's orders
@@ -236,7 +236,7 @@ def update_order_status(order_id):
           properties:
             status:
               type: string
-              enum: [pending, processing, shipped, delivered, canceled]
+              enum: [pending, processing, shipped, delivered, cancelled]
     responses:
       200:
         description: Status successfully updated
@@ -256,7 +256,7 @@ def update_order_status(order_id):
     claims = get_jwt()
     role = claims.get('role')
 
-    valid_statuses = ['pending', 'processing', 'shipped', 'delivered', 'canceled']
+    valid_statuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
     if new_status not in valid_statuses:
         return jsonify({"error": f"Invalid status! Must be one of: {valid_statuses}"}), 400
 
@@ -268,16 +268,16 @@ def update_order_status(order_id):
         # Cancelation logic
         if role != 'admin':
             if order.user_id == user_id:
-                if new_status != 'canceled' or order.status != 'pending':
-                    return jsonify({"error": "Buyers can only change status to 'canceled' while it is still pending."}), 403
+                if new_status != 'cancelled' or order.status != 'pending':
+                    return jsonify({"error": "Buyers can only change status to 'cancelled' while it is still pending."}), 403
             elif order.seller_id == user_id:
-                if new_status == 'canceled':
+                if new_status == 'cancelled':
                     return jsonify({"error": "Sellers cannot cancel orders. Contact admin."}), 403
             else:
                 return jsonify({"error": "Unauthorized! You are not involved in this order."}), 403
 
         # Add stock when it's cancelled
-        if new_status == 'canceled' and order.status != 'canceled':
+        if new_status == 'cancelled' and order.status != 'cancelled':
             for item in order.items:
                 product = Products.query.get(item.product_id)
                 if product:

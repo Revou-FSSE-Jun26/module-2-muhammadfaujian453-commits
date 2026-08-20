@@ -215,7 +215,7 @@ class Orders(db.Model):
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='RESTRICT'), nullable = False)
     seller_id = db.Column(db.BigInteger, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False)
     status = db.Column(
-        db.Enum('pending', 'processing', 'shipped','delivered' ,'canceled', name='order_logistics_status'),
+        db.Enum('pending', 'processing', 'shipped','delivered' ,'cancelled', name='order_logistics_status'),
         nullable = False,
         server_default = "'pending'"
     )
