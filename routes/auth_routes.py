@@ -1,19 +1,19 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from utils import db
-from models import Users, Orders
+from models import Users
 from sqlalchemy.exc import SQLAlchemyError
-from auth import roles_required
 
+# Blueprint
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 
 # =========================================================================
-# 1. USER MODULE (BLUEPRINT: auth_bp | PREFIX: /auth)
+# 1. USER MODULE (BLUEPRINT: users_bp | PREFIX: /users)
 # =========================================================================
 
 # A. New User Registration Route
-@auth_bp.route('', methods = ['POST'])
+@users_bp.route('', methods = ['POST'])
 def register_user():
     """Register a new user
     ---
@@ -39,15 +39,14 @@ def register_user():
             full_name:
               type: string
               example: "John Doe"
-            role:
+            avatar_url:
               type: string
-              example: "buyer"
-              enum: ['admin', 'buyer', 'seller']
+              example: "https://example.com/avatar.jpg"
     responses:
       201:
         description: User registered successfully
       400:
-        description: Missing required fields or invalid role
+        description: Missing required fields
       409:
         description: Email already registered
       500:
@@ -58,20 +57,17 @@ def register_user():
     email = data.get('email')
     password = data.get('password')
     full_name = data.get('full_name')
-    role = data.get('role', 'buyer')
+    avatar_url = data.get('avatar_url')
 
     if not email or not password or not full_name:
         return jsonify({"error": "The email, password, and full_name fields are required!"}), 400
-
-    if role not in ['admin', 'buyer', 'seller']:
-        return jsonify({"error": "Invalid role! Options: admin, buyer, seller"}), 400
 
     existing_user = Users.query.filter_by(email=email).first()
     if existing_user:
         return jsonify({"error": "Email already registered on the system!"}), 409
 
     try:
-        new_user = Users(email=email, full_name=full_name, role=role)
+        new_user = Users(email=email, full_name=full_name, avatar_url=avatar_url)
         new_user.set_password(password)
 
         db.session.add(new_user)
@@ -85,17 +81,13 @@ def register_user():
     except SQLAlchemyError as e:
         db.session.rollback()
         return jsonify({
-            "error": "An internal database operation failure occurred!",
+            "error": "Database error",
             "details": str(e.__dict__.get('orig', e))
         }), 500
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": f"Failed to save data: {str(e)}"}), 500
-
 
 # B. Retrieve Specific User Route
-@auth_bp.route('/<int:user_id>', methods=['GET'])
+@users_bp.route('/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_user_by_id(user_id):
     """Get user profile by ID
@@ -126,8 +118,8 @@ def get_user_by_id(user_id):
 
     try:
         user = Users.query.get(user_id)
-        if not user:
-            return jsonify({"error": f"User with ID {user_id} not found on the system!"}), 404
+        if not user or not user.is_active:
+            return jsonify({"error": f"Active user with ID {user_id} not found!"}), 404
 
         if requester_id != user_id and requester_role != 'admin':
             return jsonify({"error": "Unauthorized! You can only view your own profile data unless you are an admin."}), 403
@@ -139,12 +131,12 @@ def get_user_by_id(user_id):
     
     except SQLAlchemyError as e:
         return jsonify({
-            "error": "Failed to retrieve data from the database!",
+            "error": "Database error",
             "details": str(e.__dict__.get('orig', e))
         }), 500
 
 # C. Delete User Account Route
-@auth_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@users_bp.route('/<int:user_id>', methods=['DELETE'])
 @jwt_required()
 def delete_user(user_id):
     """Delete user account
@@ -161,9 +153,7 @@ def delete_user(user_id):
         description: The user ID
     responses:
       200:
-        description: Account successfully deleted
-      400:
-        description: Deletion guard triggered (linked orders or active products)
+        description: Account successfully deactivated
       403:
         description: Forbidden (Not the owner and not an admin)
       404:
@@ -177,30 +167,23 @@ def delete_user(user_id):
 
     try:
         user = Users.query.get(user_id)
-        if not user:
-            return jsonify({"error": f"User with ID {user_id} not found on the system!"}), 404
+        if not user or not user.is_active:
+            return jsonify({"error": f"Active user with ID {user_id} not found!"}), 404
 
         if requester_id != user_id and requester_role != 'admin':
             return jsonify({"error": "Unauthorized! You can only delete your own account unless you are an admin."}), 403
 
-        any_purchase_history = Orders.query.filter_by(user_id=user_id).first()
-        if any_purchase_history:
-            return jsonify({
-                "error": "Cannot delete account! This user profile is linked to historical purchase order records."
-            }), 400
+        user.is_active = False
 
-        if user.role == 'seller' and user.seller_profile:
-            if user.seller_profile.products:
-                return jsonify({
-                    "error": "Cannot delete account! Your store still has active products listed. Please delete all products first."
-                }), 400
+        if user.seller_profile:
+            user.seller_profile.is_active = False
 
-        db.session.delete(user)
+            for product in user.seller_profile.products:
+                product.is_active = False
+
         db.session.commit()
 
-        return jsonify({
-            "message": f"User with ID {user_id} and its associated store profile have been successfully deleted!"
-        }), 200
+        return jsonify({"error": f"User with ID {user_id} and its associated data successfully deactivated"}), 200
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -256,6 +239,16 @@ def login():
 
     if user is None or not user.check_password(password):
         return jsonify({"error": 'Invalid email or password'}), 401
+
+    message = 'Login successful'
+    if not user.is_active:
+        user.is_active = True
+
+        if user.seller_profile:
+            user.seller_profile.is_active = True
+
+        db.session.commit()
+        message = 'Login successful. Your account has been reactivated!'
 
     # Generate JWT Token carrying the user's ID and Role
     token = create_access_token(
