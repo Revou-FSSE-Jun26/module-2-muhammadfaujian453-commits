@@ -2,6 +2,8 @@ from flask import Flask, jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
+from errors import register_error_handlers
+from flasgger import Swagger
 from config import Config
 from utils import db
 
@@ -18,17 +20,28 @@ def create_app():
     # Setup Flask-Migrate
     migrate = Migrate(app, db)
 
+    # Initializing JWT
+    jwt = JWTManager(app)
+
+    # Initializing Swagger
+    swagger = Swagger(app)
+
     # Import models
     from models import Users, Sellers, Categories, Products, Orders
 
     # Import routes
-    from routes import auth_bp, category_bp, seller_bp, product_bp, order_bp
+    from routes.auth_routes import auth_bp, users_bp
+    from routes.category_routes import category_bp
+    from routes.seller_routes import seller_bp
+    # from routes.product_routes import product_bp
+    # from routes.order_routes import order_bp
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(users_bp)
     app.register_blueprint(category_bp)
     app.register_blueprint(seller_bp)
-    app.register_blueprint(product_bp)
-    app.register_blueprint(order_bp)
+    # app.register_blueprint(product_bp)
+    # app.register_blueprint(order_bp)
 
     # Endpoint routes for checking database connection
     @app.route('/health')
@@ -50,6 +63,9 @@ def create_app():
             db.session.close()
 
         return jsonify({"status": status})
+
+    # Initializing Error Handlers
+    register_error_handlers(app)
 
     return app
 

@@ -3,6 +3,30 @@ from utils import db
 from auth import hash_password, check_password
 
 # =========================================================================
+# ASSOCIATION TABLES (Many-to-Many)
+# =========================================================================
+
+# 1. cart_items Table
+cart_items = db.Table(
+    'cart_items',
+    db.Column('cart_id', db.BigInteger, db.ForeignKey('carts.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('product_id', db.BigInteger, db.ForeignKey('products.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('quantity', db.Integer, nullable=False, default=1),
+    db.CheckConstraint('quantity > 0', name='cart_items_quantity_check')
+)
+
+# 2. order_items Table
+order_items = db.Table(
+    'order_items',
+    db.Column('order_id', db.BigInteger, db.ForeignKey('orders.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('product_id', db.BigInteger, db.ForeignKey('products.id', ondelete='RESTRICT'), primary_key=True),
+    db.Column('quantity', db.Integer, nullable=False),
+    db.Column('unit_price', db.Numeric(12, 2), nullable=False),
+    db.CheckConstraint('quantity > 0', name='order_items_quantity_check'),
+    db.CheckConstraint('unit_price >= 0', name='order_items_unit_price_check')
+)
+
+# =========================================================================
 # 1. MODEL USER
 # =========================================================================
 class Users(db.Model):
@@ -13,19 +37,25 @@ class Users(db.Model):
     email = db.Column(db.String(255), nullable = False, unique = True)
     password_hash = db.Column(db.String(255), nullable = False)
     full_name = db.Column(db.String(100), nullable = False)
+    avatar_url = db.Column(db.String(255), nullable = True)
+
+    # Soft Deletion Flag
+    is_active = db.Column(db.Boolean, default = True, nullable = False)
+
     created_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
     # Data Enum for Role Column
     role = db.Column(
-        db.Enum('admin', 'buyer', 'seller', name='user_role'), 
+        db.Enum('admin', 'user', name='system_role'), 
         nullable = False, 
-        server_default = "'buyer'"
+        server_default = "'user'"
     )
 
     # Relationship between Table
     seller_profile = db.relationship('Sellers', back_populates = 'user', uselist = False, lazy = 'joined')
     orders = db.relationship('Orders', back_populates = 'buyer', lazy = 'selectin')
+    cart = db.relationship('Carts', back_populates = 'user', uselist = False, lazy = 'joined')
 
     # Function  for Automate Password Plaintext Encyscription 
     def set_password(self, password):
@@ -42,6 +72,8 @@ class Users(db.Model):
             "email": self.email,
             "full_name": self.full_name,
             "role": self.role,
+            "avatar_url": self.avatar_url,
+            "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
@@ -56,6 +88,11 @@ class Sellers(db.Model):
     id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key = True)
     store_name = db.Column(db.String(100), nullable = False, unique = True)
     store_description = db.Column(db.Text)
+    avatar_url = db.Column(db.String(255), nullable = True)
+
+    #Soft Deletion Flag
+    is_active = db.Column(db.Boolean, default = True, nullable = False)
+
     created_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
@@ -69,6 +106,8 @@ class Sellers(db.Model):
             "id": self.id,  # id toko ini bernilai sama dengan id user pemiliknya
             "store_name": self.store_name,
             "store_description": self.store_description,
+            "avatar_url": self.avatar_url,
+            "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
@@ -83,6 +122,7 @@ class Categories(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     name = db.Column(db.String(100),nullable = False, unique = True)
     description = db.Column(db.Text)
+
     created_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
@@ -113,6 +153,11 @@ class Products(db.Model):
     description = db.Column(db.Text)
     price = db.Column(db.Numeric(12, 2), nullable = False)
     stock = db.Column(db.Integer, nullable = False, server_default = '0')
+    image_url = db.Column(db.String(255), nullable = True)
+
+    #Soft Deletion Flag
+    is_active = db.Column(db.Boolean, default = True, nullable = False)
+
     created_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
@@ -136,22 +181,37 @@ class Products(db.Model):
             "description": self.description,
             "price": float(self.price) if self.price is not None else 0.0,
             "stock": self.stock,
+            "image_url": self.image_url,
+            "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
 
 # =========================================================================
-# 5. ORDER_ITEMS TABLE (ASSOCIATION)
+# 5. MODEL CARTS
 # =========================================================================
-order_items = db.Table(
-    'order_items',
-    db.Column('order_id', db.BigInteger, db.ForeignKey('orders.id', ondelete='CASCADE'), primary_key=True),
-    db.Column('product_id', db.BigInteger, db.ForeignKey('products.id', ondelete='RESTRICT'), primary_key=True),
-    db.Column('quantity', db.Integer, nullable=False),
-    db.Column('unit_price', db.Numeric(12, 2), nullable=False),
-    db.CheckConstraint('quantity > 0', name='order_items_quantity_check'),
-    db.CheckConstraint('unit_price >= 0', name='order_items_unit_price_check')
-)
+class Carts(db.Model):
+    __tablename__ = 'carts'
+
+    # Generate Column and it's Criteria
+    id = db.Column(db.BigInteger, primary_key=True)
+    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
+
+    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
+    updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), onupdate=db.func.now())
+
+    # Relationship between Table
+    user = db.relationship('Users', back_populates = 'cart')
+    items = db.relationship('Products', secondary = cart_items, lazy = 'selectin', backref=  db.backref('carts', lazy='selectin'))
+
+    # Function for Converting to Dictionary
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
 
 # =========================================================================
 # 6. MODEL ORDERS
@@ -162,8 +222,14 @@ class Orders(db.Model):
     # Generate Column and it's Criteria
     id = db.Column(db.BigInteger, primary_key = True)
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='RESTRICT'), nullable = False)
-    status = db.Column(db.Enum('PENDING', 'PAID', 'SHIPPED', 'CANCELED', name='order_status'), nullable = False, server_default = "'PENDING'")
+    status = db.Column(
+        db.Enum('pending', 'processing', 'shipped','delivered' ,'canceled', name='order_logistics_status'),
+        nullable = False,
+        server_default = "'pending'"
+    )
     total_amount = db.Column(db.Numeric(12, 2), nullable = False)
+    shipping_address = db.Column(db.Text, nullable=  False)
+
     created_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
@@ -188,6 +254,7 @@ class Orders(db.Model):
             "user_id": self.user_id,
             "status": self.status,
             "total_amount": float(self.total_amount) if self.total_amount is not None else 0.0,
+            "shipping_address": self.shipping_address,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
