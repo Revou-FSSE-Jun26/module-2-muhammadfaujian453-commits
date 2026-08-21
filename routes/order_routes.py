@@ -62,7 +62,7 @@ def checkout():
 
         seller_groups = {} 
         for item in items:
-            product = Products.query.with_for_update().filter_by(id=item.product_id, is_active=True).first()
+            product = Products.query.with_for_update(of=Products).filter_by(id=item.product_id, is_active=True).first()
             if not product:
                 db.session.rollback()
                 return jsonify({"error": f"Product with ID {item.product_id} is no longer available!"}), 400
