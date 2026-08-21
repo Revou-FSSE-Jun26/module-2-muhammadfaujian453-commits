@@ -106,7 +106,7 @@ def get_user_by_id(user_id):
       200:
         description: User profile details
       401:
-        description: Unaouthorized (Invalid or missing token)
+        description: Unauthorized (Invalid or missing token)
       403:
         description: Forbidden (Not the owner and not an admin)
       404:

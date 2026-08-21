@@ -341,7 +341,7 @@ def clear_cart():
       200:
         description: Cart cleared successfully
       401:
-        escription: Unauthorized (Invalid or missing token)
+        description: Unauthorized (Invalid or missing token)
       500:
         description: Internal server error
     """

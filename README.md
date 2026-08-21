@@ -141,7 +141,7 @@ This backend is safeguarded by a comprehensive **End-to-End (E2E) Test Suite** b
 
 ---
 
-## 🧪 Interactive API Documentation (Swagger UI)
+## 🧪 Interactive API Documentation (Swagger)
 
 This system is thoroughly documented using **Flasgger**. 
 
@@ -185,5 +185,28 @@ Below is the testing matrix covering all core functionalities.
 
 ---
 
-> **Visual Proof: Example of Security & RBAC in Action when a seller tries to cancel order**
-![Postman showing 403 Forbidden](assets/img_readme/rbacforbidden.png)
+## 📮 Postman E2E Workflow & Security Testing
+
+While Swagger UI provides excellent endpoint-level interaction, the complete business lifecycles and security edge cases (Negative Testing) are documented and tested using Postman. This collection contains a comprehensive suite of API requests divided into 5 core testing modules:
+
+* **1. Auth & Identity:** JWT token generation, role extraction, and automated environment variable scripting for seamless testing.
+* **2. Catalog Management:** Dynamic product filtering and seller-restricted CRUD operations.
+* **3. Cart & Checkout:** Active prevention of cart exploits (negative quantity injections, out-of-stock bypassing) and the core execution of the **Split-Order Checkout** architecture.
+* **4. Order Management:** End-to-end lifecycle tracking, allowing buyers to view order history and sellers to update logistics statuses.
+* **5. Security & RBAC:** Active testing against Horizontal Privilege Escalation (IDOR) and role-based status manipulation (e.g., providing `403 Forbidden` proofs when sellers attempt to cancel orders or access other tenants' data).
+
+Click the badge below to access the complete JSON collection. You can import this file directly into your local Postman workspace to replicate the End-to-End testing environment.
+
+[![View Postman Collection](https://img.shields.io/badge/Postman-API%20Docs-orange?logo=postman)](./postman-revoshop.json)
+
+> **Visual Proof: Example of Security & RBAC in Action when a seller tries to change other seller order**
+![Postman showing 403 Forbidden](assets/img_readme/403forbidden.png)
+
+---
+
+## 🛣️ Future Enhancements
+
+To further optimize the marketplace ecosystem, the following features are planned for future iterations:
+*   **Direct Checkout (Buy Now) API:** To reduce friction and increase conversion rates, future updates will include a decoupled checkout route allowing users to bypass the cart state for single-item immediate purchases.
+*   **Database Migration Management:** Implementing Flask-Migrate (Alembic) to handle complex schema evolutions smoothly as the platform grows.
+*   **Rate Limiting:** Adding `Flask-Limiter` to protect authentication endpoints against brute-force attacks.

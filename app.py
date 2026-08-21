@@ -36,7 +36,7 @@ def create_app(test_config=None):
                 "type": "apiKey",
                 "name": "Authorization",
                 "in": "header",
-                "description": "Ketik 'Bearer ' diikuti dengan spasi lalu token JWT Anda.\n\nContoh: 'Bearer eyJhbGci...'"
+                "description": "Type 'Bearer' followed by 'space', then input your JWT Token.\n\nExample: 'Bearer eyJhbGci...'"
             }
         }
     }

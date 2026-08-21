@@ -1,0 +1,2105 @@
+{
+  "info": {
+    "_postman_id": "a61faf6f-b48d-433a-a8a1-c994639b12ac",
+    "name": "RevoShop API - Multi-Vendor E-Commerce",
+    "description": "# RevoShop API – Multi-Vendor E-Commerce\n\nThis collection covers the core backend API for **RevoShop**, a multi-vendor e-commerce platform where multiple sellers can list products and buyers can discover, cart, and purchase items from different stores in a single checkout.\n\n## Folders\n\n### 1. Auth & Identity\nHandles user registration and authentication for both buyers and sellers. Includes login endpoints that return JWT tokens (stored as `buyer_token` and `seller_token` environment variables) and a `/users/me` endpoint to retrieve the current authenticated user's profile.\n\n### 2. Catalog Management\nCovers seller-facing product operations: creating a new product, listing all products with price filtering and pagination, retrieving a single product's detail, and updating a product. Access is role-restricted — only the owning seller may modify their listings.\n\n### 3. Cart & Checkout\nManages the buyer's shopping cart across multiple stores. Supports adding items from different stores (Store A and Store B), viewing the full cart, and triggering a **split-order checkout** that automatically separates items by seller into distinct sub-orders. Also includes negative-case validation for invalid quantities and out-of-stock scenarios, as well as attempting to checkout an empty cart.\n\n### 4. Order Management\nProvides order history retrieval for buyers and order status updates for sellers, enabling sellers to progress an order through its lifecycle (e.g., processing → shipped).\n\n### 5. Security & RBAC\nValidates role-based access control (RBAC) and authorization boundaries. Tests confirm that sellers cannot cancel buyer orders, buyers cannot change order statuses, buyers cannot view other buyers' orders, sellers cannot modify other sellers' orders, and unauthenticated requests are correctly rejected with `401 Unauthorized` or `403 Forbidden` responses.\n\n---\n\n**Base URL:** `{{base_url}}`  \n**Auth:** Bearer token — use `{{buyer_token}}` for buyer requests and `{{seller_token}}` for seller requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "57331440"
+  },
+  "item": [
+    {
+      "name": "1. Auth & Identity",
+      "item": [
+        {
+          "name": "1. Login Buyer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseData = pm.response.json();",
+                  "",
+                  "pm.environment.set(\"buyer_token\", responseData.token);",
+                  "",
+                  "console.log(\"Buyer token has been successfully updated automatically!\");"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"eko@gmail.com\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"eko@gmail.com\",\n    \"password\": \"password123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 10:42:00 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "634"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Login successful\",\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc4NzMwODkyMCwianRpIjoiOTIxYTA1NTgtMTY1MS00NDg4LWEzMjItN2E2MjYxNTI4ZTQyIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjUiLCJuYmYiOjE3ODczMDg5MjAsImNzcmYiOiI0M2MwMWYwMS0wM2I3LTQ3OGYtOTkyOC1iZDc4M2QyYmM1YzIiLCJleHAiOjE3ODczMTI1MjAsInJvbGUiOiJ1c2VyIn0.31Mm6lwXC8ZpIQlHtA49dP3LbPN04nDqkjGNiVnZOMY\",\n    \"user\": {\n        \"avatar_url\": null,\n        \"created_at\": null,\n        \"email\": \"eko@gmail.com\",\n        \"full_name\": \"Eko Rusdiyanto\",\n        \"id\": 5,\n        \"is_active\": true,\n        \"role\": \"user\",\n        \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Login Seller",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseData = pm.response.json();",
+                  "",
+                  "pm.environment.set(\"seller_token\", responseData.token);",
+                  "",
+                  "console.log(\"Seller token has been successfully updated automatically!\");"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"faujian@angkasa.com\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"faujian@angkasa.com\",\n    \"password\": \"password123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 10:45:09 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "642"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Login successful\",\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc4NzMwOTEwOSwianRpIjoiZmQyYTNiNjEtZTEwMy00NzNkLTllZjEtOGJjMjVjZDVkN2E1IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjIiLCJuYmYiOjE3ODczMDkxMDksImNzcmYiOiI2M2EyNDlkZi1kYmFmLTQxMDItOGY0YS1hZDdmMWQ4NjkxZmUiLCJleHAiOjE3ODczMTI3MDksInJvbGUiOiJ1c2VyIn0.eWq8ol5nCkRInc6xZEtM6D0b4Jmg0ktTrdj-IH7eueI\",\n    \"user\": {\n        \"avatar_url\": null,\n        \"created_at\": null,\n        \"email\": \"faujian@angkasa.com\",\n        \"full_name\": \"Muhammad Faujian\",\n        \"id\": 2,\n        \"is_active\": true,\n        \"role\": \"user\",\n        \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. Register New User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"ramin@gmail.com\",\n    \"full_name\": \"Ramin\",\n    \"password\": \"password123\",\n    \"role\": \"user\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"ramin@gmail.com\",\n    \"full_name\": \"Ramin\",\n    \"password\": \"password123\",\n    \"role\": \"user\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/users",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
+                }
+              },
+              "status": "CREATED",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 16:44:01 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "280"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"User registration successful\",\n    \"user\": {\n        \"avatar_url\": null,\n        \"created_at\": null,\n        \"email\": \"ramin@gmail.com\",\n        \"full_name\": \"Ramin\",\n        \"id\": 6,\n        \"is_active\": true,\n        \"role\": \"user\",\n        \"updated_at\": \"2026-08-21T23:44:01.283885+07:00\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "4. Register as \"me/current user\"\"",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc4NzMzMDg0NywianRpIjoiNmIyZDM5ZDUtOTJjNC00N2U5LWI0YTQtZmE1NWMwZTA4MjBkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjUiLCJuYmYiOjE3ODczMzA4NDcsImNzcmYiOiJiNzg2ZjcwMi0wOTNlLTQyOTctOTQxZS0wMzZkMjMyYjNjNmMiLCJleHAiOjE3ODczMzQ0NDcsInJvbGUiOiJ1c2VyIn0.6CrRxES3G9e0EMm_2E6AiiUvLtT20QAKmtfL1brjmso",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"ramin@gmail.com\",\n    \"full_name\": \"Ramin\",\n    \"password\": \"password123\",\n    \"role\": \"user\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/users/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 16:49:30 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "300"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Current user data successfully retrieved!\",\n    \"user\": {\n        \"avatar_url\": null,\n        \"created_at\": null,\n        \"email\": \"eko@gmail.com\",\n        \"full_name\": \"Eko Rusdiyanto\",\n        \"id\": 5,\n        \"is_active\": true,\n        \"role\": \"user\",\n        \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\"\n    }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Catalog Management",
+      "item": [
+        {
+          "name": "1. Create a New Product",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{seller_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"category_id\": 1,\n    \"name\": \"Transformator 1250kVA\",\n    \"description\": \"A crucial electrical component for your business...\",\n    \"price\": 250000000,\n    \"stock\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"category_id\": 1,\n    \"name\": \"Transformator 1250kVA\",\n    \"description\": \"A crucial electrical component for your business...\",\n    \"price\": 250000000,\n    \"stock\": 10\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/products",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "products"
+                  ]
+                }
+              },
+              "status": "CREATED",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 11:27:48 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "447"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Product successfully created!\",\n    \"product\": {\n        \"category_id\": 1,\n        \"created_at\": null,\n        \"description\": \"A crucial electrical component for your business...\",\n        \"id\": 7,\n        \"image_url\": null,\n        \"is_active\": true,\n        \"name\": \"Transformator 1250kVA\",\n        \"price\": 250000000,\n        \"seller_id\": 2,\n        \"slug\": \"transformator-1250kva-acd85063\",\n        \"stock\": 10,\n        \"updated_at\": \"2026-08-21T18:27:48.579210+07:00\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Get All Product and Filter",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"category_id\": 1,\n    \"name\": \"Transformator 1250kVA\",\n    \"description\": \"A crucial electrical component for your business...\",\n    \"price\": 250000000,\n    \"stock\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/products?min_price=100000&limit=2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "min_price",
+                  "value": "100000"
+                },
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"category_id\": 1,\n    \"name\": \"Transformator 1250kVA\",\n    \"description\": \"A crucial electrical component for your business...\",\n    \"price\": 250000000,\n    \"stock\": 10\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/products?min_price=100000&limit=2",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "products"
+                  ],
+                  "query": [
+                    {
+                      "key": "min_price",
+                      "value": "100000"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "2"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 11:34:50 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "1065"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": [\n        {\n            \"category_id\": 1,\n            \"created_at\": null,\n            \"description\": null,\n            \"id\": 2,\n            \"image_url\": \"https://dummyimage.com/400x400/ccc/000&text=NYM+Cable\",\n            \"is_active\": true,\n            \"name\": \"Supreme NYM Cable 3x2.5mm\",\n            \"price\": 450000,\n            \"seller_id\": 2,\n            \"slug\": \"supreme-nym-cable-3x25mm-935d6ebc\",\n            \"stock\": 50,\n            \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\"\n        },\n        {\n            \"category_id\": 1,\n            \"created_at\": null,\n            \"description\": null,\n            \"id\": 3,\n            \"image_url\": \"https://dummyimage.com/400x400/ccc/000&text=Panel+Box\",\n            \"is_active\": true,\n            \"name\": \"Topindo Panel Box 30x40x15\",\n            \"price\": 150000,\n            \"seller_id\": 2,\n            \"slug\": \"topindo-panel-box-30x40x15-e484147e\",\n            \"stock\": 25,\n            \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\"\n        }\n    ],\n    \"message\": \"Products retrieved successfully\",\n    \"meta\": {\n        \"current_page\": 1,\n        \"has_next\": true,\n        \"has_prev\": false,\n        \"items_per_page\": 2,\n        \"total_items\": 3,\n        \"total_pages\": 2\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. Get Product Detail",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/products/7",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products",
+                "7"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{base_url}}/products/7",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "products",
+                    "7"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 16:52:13 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "448"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Product retrieved successfully\",\n    \"product\": {\n        \"category_id\": 1,\n        \"created_at\": null,\n        \"description\": \"A crucial electrical component for your business...\",\n        \"id\": 7,\n        \"image_url\": null,\n        \"is_active\": true,\n        \"name\": \"Transformator 1250kVA\",\n        \"price\": 250000000,\n        \"seller_id\": 2,\n        \"slug\": \"transformator-1250kva-acd85063\",\n        \"stock\": 10,\n        \"updated_at\": \"2026-08-21T18:27:48.579210+07:00\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "4. Update Product by its Seller",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{seller_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"stock\": 150,\n    \"description\": \"Breaker for you electricity\",\n    \"price\": 120000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/products/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products",
+                "1"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"stock\": 150,\n    \"description\": \"Breaker for you electricity\",\n    \"price\": 120000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/products/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "products",
+                    "1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 16:55:57 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "474"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Product successfully updated!\",\n    \"product\": {\n        \"category_id\": 1,\n        \"created_at\": null,\n        \"description\": \"Breaker for you electricity\",\n        \"id\": 1,\n        \"image_url\": \"https://dummyimage.com/400x400/ccc/000&text=MCB+10A\",\n        \"is_active\": true,\n        \"name\": \"MCB 10 Ampere Schneider\",\n        \"price\": 120000,\n        \"seller_id\": 2,\n        \"slug\": \"mcb-10-ampere-schneider-4f33fe9d\",\n        \"stock\": 150,\n        \"updated_at\": \"2026-08-21T23:55:57.796639+07:00\"\n    }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Cart & Checkout",
+      "item": [
+        {
+          "name": "1. Add item to Cart (Store A)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": 1,\n    \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/carts/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "carts",
+                "items"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"product_id\": 1,\n    \"quantity\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/carts/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "carts",
+                    "items"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 10:53:13 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "52"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Item successfully added to cart!\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Add item to Cart (Store B)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": 5,\n    \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/carts/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "carts",
+                "items"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"product_id\": 5,\n    \"quantity\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/carts/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "carts",
+                    "items"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 10:59:09 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "52"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": "{\n    \"message\": \"Item successfully added to cart!\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. Split Order Checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"shipping_address\": \"Jl. Cibaduyut Raya, Bandung, West Java\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"shipping_address\": \"Jl. Cibaduyut Raya, Bandung, West Java\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/orders/checkout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "checkout"
+                  ]
+                }
+              },
+              "status": "CREATED",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 11:14:59 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "637"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Checkout successful!\",\n    \"orders\": [\n        {\n            \"created_at\": null,\n            \"id\": 6,\n            \"seller_id\": 2,\n            \"shipping_address\": \"Jl. Cibaduyut Raya, Bandung, West Java\",\n            \"status\": \"pending\",\n            \"total_amount\": 385000,\n            \"updated_at\": \"2026-08-21T18:14:59.648645+07:00\",\n            \"user_id\": 5\n        },\n        {\n            \"created_at\": null,\n            \"id\": 7,\n            \"seller_id\": 3,\n            \"shipping_address\": \"Jl. Cibaduyut Raya, Bandung, West Java\",\n            \"status\": \"pending\",\n            \"total_amount\": 122000,\n            \"updated_at\": \"2026-08-21T18:14:59.648645+07:00\",\n            \"user_id\": 5\n        }\n    ],\n    \"orders_created\": 2\n}"
+            }
+          ]
+        },
+        {
+          "name": "4. Get cart detail by its buyer",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/carts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "carts"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{base_url}}/carts",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "carts"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 16:58:26 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "98"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"cart_id\": 1,\n    \"items\": [],\n    \"message\": \"Cart retrieved successfully\",\n    \"total_price\": 0\n}"
+            }
+          ]
+        },
+        {
+          "name": "5. Negative: Add Negative Quantity to Cart",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": 4,\n    \"quantity\": -10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/carts/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "carts",
+                "items"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success(400/bad request)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"product_id\": 4,\n    \"quantity\": -10\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/carts/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "carts",
+                    "items"
+                  ]
+                }
+              },
+              "status": "BAD REQUEST",
+              "code": 400,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 17:32:54 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "53"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"Quantity must be greater than zero!\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "6. Negative: Add Quantity More than Stock",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": 3,\n    \"quantity\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/carts/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "carts",
+                "items"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success(400/bad request)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"product_id\": 3,\n    \"quantity\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/carts/items",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "carts",
+                    "items"
+                  ]
+                }
+              },
+              "status": "BAD REQUEST",
+              "code": 400,
+              "_postman_previewlanguage": "",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 17:35:13 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "57"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": "{\n    \"error\": \"Insufficient stock! Only 25 items left.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "7. Checkout Empty Cart",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"shipping_address\": \"Jl. Cibaduyut Raya, Bandung, West Java\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "checkout"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success(400/bad request)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"shipping_address\": \"Jl. Cibaduyut Raya, Bandung, West Java\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/orders/checkout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "checkout"
+                  ]
+                }
+              },
+              "status": "BAD REQUEST",
+              "code": 400,
+              "_postman_previewlanguage": "",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 17:39:10 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "65"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": "{\n    \"error\": \"Your cart is empty. Cannot proceed to checkout.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Order Management",
+      "item": [
+        {
+          "name": "1. Get order history by its buyer",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{base_url}}/orders",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 17:00:44 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "1174"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Orders retrieved successfully\",\n    \"orders\": [\n        {\n            \"created_at\": null,\n            \"id\": 6,\n            \"seller_id\": 2,\n            \"shipping_address\": \"Jl. Cibaduyut Raya, Bandung, West Java\",\n            \"status\": \"pending\",\n            \"total_amount\": 385000,\n            \"updated_at\": \"2026-08-21T18:14:59.648645+07:00\",\n            \"user_id\": 5\n        },\n        {\n            \"created_at\": null,\n            \"id\": 5,\n            \"seller_id\": 2,\n            \"shipping_address\": \"Jl. Dummy Address No. 123, Bandung\",\n            \"status\": \"processing\",\n            \"total_amount\": 450000,\n            \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\",\n            \"user_id\": 5\n        },\n        {\n            \"created_at\": null,\n            \"id\": 7,\n            \"seller_id\": 3,\n            \"shipping_address\": \"Jl. Cibaduyut Raya, Bandung, West Java\",\n            \"status\": \"pending\",\n            \"total_amount\": 122000,\n            \"updated_at\": \"2026-08-21T18:14:59.648645+07:00\",\n            \"user_id\": 5\n        },\n        {\n            \"created_at\": null,\n            \"id\": 2,\n            \"seller_id\": 3,\n            \"shipping_address\": \"Jl. Dummy Address No. 123, Bandung\",\n            \"status\": \"shipped\",\n            \"total_amount\": 190000,\n            \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\",\n            \"user_id\": 5\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Update order status by its seller",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{seller_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\" : \"shipped\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/6/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "6",
+                "status"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"status\" : \"shipped\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/orders/6/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "6",
+                    "status"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 17:05:36 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "334"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Order status successfully updated to 'shipped'!\",\n    \"order\": {\n        \"created_at\": null,\n        \"id\": 6,\n        \"seller_id\": 2,\n        \"shipping_address\": \"Jl. Cibaduyut Raya, Bandung, West Java\",\n        \"status\": \"shipped\",\n        \"total_amount\": 385000,\n        \"updated_at\": \"2026-08-22T00:05:36.892135+07:00\",\n        \"user_id\": 5\n    }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Security & RBAC",
+      "item": [
+        {
+          "name": "1. Seller trying to cancel",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{seller_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"cancelled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/6/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "6",
+                "status"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success (403/forbidden)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"status\": \"cancelled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/orders/6/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "6",
+                    "status"
+                  ]
+                }
+              },
+              "status": "FORBIDDEN",
+              "code": 403,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 11:55:07 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "62"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"Sellers cannot cancel orders. Contact admin.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Buyer change the order status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\" : \"delivered\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/6/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "6",
+                "status"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success(403/forbidden)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"status\" : \"delivered\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/orders/6/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "6",
+                    "status"
+                  ]
+                }
+              },
+              "status": "FORBIDDEN",
+              "code": 403,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 17:14:07 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "89"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"Buyers can only change status to 'cancelled' while it is still pending.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. Buyer get other buyer order",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "1"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "succsess(403/forbidden)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{base_url}}/orders/1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "1"
+                  ]
+                }
+              },
+              "status": "FORBIDDEN",
+              "code": 403,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 17:16:41 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "66"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"Unauthorized! You can only view your own orders.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "4. Seller change other seller order",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{seller_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\" : \"shipped\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/4/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "4",
+                "status"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success(403/forbidden)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"status\" : \"shipped\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/orders/4/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "4",
+                    "status"
+                  ]
+                }
+              },
+              "status": "FORBIDDEN",
+              "code": 403,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 17:19:18 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "67"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"Unauthorized! You are not involved in this order.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "5. Access without token",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success(401/unauthorized)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/orders",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders"
+                  ]
+                }
+              },
+              "status": "UNAUTHORIZED",
+              "code": 401,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Aug 2026 17:22:10 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "44"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"msg\": \"Missing Authorization Header\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
