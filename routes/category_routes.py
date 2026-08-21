@@ -163,7 +163,7 @@ def update_category(category_id):
     new_description = data.get('description')
     
     try:
-        category = Categories.query.get(category_id)
+        category = db.session.get(Categories, category_id)
         if not category:
             return jsonify({"error": "Category not found!"}), 404
 
@@ -221,7 +221,7 @@ def delete_category(category_id):
         description: Internal server error
     """
     try:
-        category = Categories.query.get(category_id)
+        category = db.session.get(Categories, category_id)
         if not category:
             return jsonify({"error": "Category not found!"}), 404
 

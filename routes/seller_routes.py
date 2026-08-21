@@ -68,7 +68,7 @@ def create_store():
     store_description = data.get('store_description')
     avatar_url = data.get('avatar_url')
 
-    existing_store = Sellers.query.get(user_id)
+    existing_store = db.session.get(Sellers, user_id)
     if existing_store:
         if not existing_store.is_active:
             return jsonify({"error": "You already have a deactivated store. Please use the update endpoint to reactivate it."}), 400
@@ -188,7 +188,7 @@ def update_store():
         }), 400
     
     try:
-        store = Sellers.query.get(user_id)
+        store = db.session.get(Sellers, user_id)
         
         new_name = data.get('store_name')
         
@@ -242,7 +242,7 @@ def close_store():
     user_id = int(get_jwt_identity())
     
     try:
-        store = Sellers.query.get(user_id)
+        store = db.session.get(Sellers, user_id)
         
         # Soft delete the store
         store.is_active = False

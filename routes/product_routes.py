@@ -86,7 +86,7 @@ def create_product():
 
     # Business Logic Validation
     category_id = data.get('category_id')
-    category = Categories.query.get(category_id)
+    category = db.session.get(Categories, category_id)
     if not category:
         return jsonify({"error": f"Category with ID {category_id} not found!"}), 404
 

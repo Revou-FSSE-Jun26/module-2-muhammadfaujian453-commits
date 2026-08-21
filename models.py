@@ -217,7 +217,7 @@ class Orders(db.Model):
     status = db.Column(
         db.Enum('pending', 'processing', 'shipped','delivered' ,'cancelled', name='order_logistics_status'),
         nullable = False,
-        server_default = "'pending'"
+        server_default = "pending"
     )
     total_amount = db.Column(db.Numeric(12, 2), nullable = False)
     shipping_address = db.Column(db.Text, nullable=  False)
@@ -228,6 +228,7 @@ class Orders(db.Model):
     # Relationship between Table
     buyer = db.relationship('Users', back_populates = 'orders', lazy = 'joined')
     seller = db.relationship('Sellers', backref=db.backref('store_orders', lazy='selectin'), lazy='joined')
+    order_items = db.relationship('OrderItems', backref='order', cascade='all, delete-orphan', lazy='selectin')
 
     # Constraint for Column
     __table_args__ = (

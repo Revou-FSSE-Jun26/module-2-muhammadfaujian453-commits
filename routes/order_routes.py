@@ -200,7 +200,7 @@ def get_order_details(order_id):
     role = claims.get('role')
 
     try:
-        order = Orders.query.get(order_id)
+        order = db.session.get(Orders, order_id)
         if not order:
             return jsonify({"error": "Order not found!"}), 404
 
@@ -269,7 +269,7 @@ def update_order_status(order_id):
         return jsonify({"error": f"Invalid status! Must be one of: {valid_statuses}"}), 400
 
     try:
-        order = Orders.query.get(order_id)
+        order = db.session.get(Orders, order_id)
         if not order:
             return jsonify({"error": "Order not found!"}), 404
 
@@ -286,8 +286,8 @@ def update_order_status(order_id):
 
         # Add stock when it's cancelled
         if new_status == 'cancelled' and order.status != 'cancelled':
-            for item in order.items:
-                product = Products.query.get(item.product_id)
+            for item in order.order_items:
+                product = db.session.get(Products, item.product_id)
                 if product:
                     product.stock += item.quantity
                     

@@ -40,7 +40,6 @@ def test_login_success(client):
         "full_name": "Login User"
     })
     
-    # 2. Coba login
     response = client.post('/auth/login', json={
         "email": "loginuser@gmail.com",
         "password": "password123"
@@ -50,3 +49,30 @@ def test_login_success(client):
     assert response.status_code == 200
     assert "token" in data
     assert data["user"]["email"] == "loginuser@gmail.com"
+
+def test_login_wrong_password(client):
+    """Scenario: Reject login attempt with incorrect password (401)"""
+    client.post('/users', json={
+        "email": "wrongpass@gmail.com",
+        "password": "password123",
+        "full_name": "Test User"
+    })
+    
+    response = client.post('/auth/login', json={
+        "email": "wrongpass@gmail.com",
+        "password": "wrongpassword"
+    })
+    
+    assert response.status_code == 401
+    assert "error" in response.get_json()
+
+def test_register_invalid_data(client):
+    """Scenario: Reject registration with invalid email format or missing fields (400)"""
+    response = client.post('/users', json={
+        "email": "not-an-email", 
+        "password": "pass"
+        #Missing full_name
+    })
+    
+    assert response.status_code == 400
+    assert "error" in response.get_json() or "details" in response.get_json()

@@ -1,6 +1,7 @@
 import bcrypt
 from functools import wraps
 from flask import jsonify
+from utils import db
 from flask_jwt_extended import get_jwt, verify_jwt_in_request, get_jwt_identity
 
 # =========================================================================
@@ -57,7 +58,7 @@ def seller_required():
             verify_jwt_in_request()
             user_id = int(get_jwt_identity())
 
-            store = Sellers.query.get(user_id)
+            store = db.session.get(Sellers, user_id)
             if not store or not store.is_active:
                 return jsonify({
                     "error": "forbidden",

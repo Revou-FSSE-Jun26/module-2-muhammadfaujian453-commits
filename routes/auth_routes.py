@@ -121,7 +121,7 @@ def get_user_by_id(user_id):
     requester_role= claims.get('role')
 
     try:
-        user = Users.query.get(user_id)
+        user = db.session.get(Users, user_id)
         if not user or not user.is_active:
             return jsonify({"error": f"Active user with ID {user_id} not found!"}), 404
 
@@ -172,7 +172,7 @@ def delete_user(user_id):
     requester_role = claims.get('role')
 
     try:
-        user = Users.query.get(user_id)
+        user = db.session.get(Users, user_id)
         if not user or not user.is_active:
             return jsonify({"error": f"Active user with ID {user_id} not found!"}), 404
 
@@ -219,7 +219,7 @@ def get_current_user():
     user_id = int(get_jwt_identity())
 
     try:
-        user = Users.query.get(user_id)
+        user = db.session.get(Users, user_id)
         if not user or not user.is_active:
             return jsonify({"error": "Active user not found!"}), 404
     
