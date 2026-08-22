@@ -206,7 +206,10 @@ Click the badge below to access the complete JSON collection. You can import thi
 
 ## 🛣️ Future Enhancements
 
-To further optimize the marketplace ecosystem, the following features are planned for future iterations:
-*   **Direct Checkout (Buy Now) API:** To reduce friction and increase conversion rates, future updates will include a decoupled checkout route allowing users to bypass the cart state for single-item immediate purchases.
-*   **Database Migration Management:** Implementing Flask-Migrate (Alembic) to handle complex schema evolutions smoothly as the platform grows.
-*   **Rate Limiting:** Adding `Flask-Limiter` to protect authentication endpoints against brute-force attacks.
+To further optimize the marketplace ecosystem and elevate the system to enterprise-grade standards, the following features are planned for future iterations:
+
+*   **Advanced Authentication:** Implementing a dual-token JWT architecture (Access & Refresh Tokens) with Token Freshness to improve UX and secure sensitive endpoints.
+*   **Object-Oriented Validation (DTOs):** Refactoring procedural validation into Marshmallow schemas for stricter data integrity and centralized error handling.
+*   **Database Schema Stability:** Integrating Flask-Migrate (Alembic) with explicit SQLAlchemy naming conventions to ensure safe, crash-free database evolutions.
+*   **Rate Limiting:** Adding `Flask-Limiter` to protect authentication and transaction endpoints against brute-force attacks.
+*   **Direct Checkout API:** Building a decoupled "Buy Now" route to bypass the cart state, reducing user friction for single-item purchases.
