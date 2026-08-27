@@ -1,16 +1,16 @@
 # Multi-Vendor E-Commerce API
 
-## 📖 Overview
+## Overview
 This repository contains a robust, scalable backend API designed for a multi-tenant e-commerce platform. Built with Python and Flask, it utilizes a single-database configuration for Flask using PostgreSQL and SQLAlchemy. The architecture enforces strict domain boundaries, separating buyers, sellers, and system administrators, making it a highly structured foundation for complex marketplace operations.
 
-## ✨ Core Architectural Features
+## Core Architectural Features
 *   **Split-Order Checkout System:** Intelligently dissects a single user cart into multiple isolated orders based on distinct seller IDs, ensuring accurate logistics and financial segregation.
 *   **Role-Based Access Control (RBAC):** Secures endpoints using JWT authentication, strictly restricting data mutation operations based on user roles (Admin, Seller, Buyer).
 *   **Resilient Data Management:** Implements comprehensive soft-deletion mechanisms across users, stores, and products to maintain referential integrity without destroying historical transaction data.
 *   **Dynamic Data Filtering:** Provides robust product discovery through dynamic querying (price ranges, category IDs, text search) combined with offset pagination.
 *   **Automated Slug Generation:** Prevents URL collisions by automatically generating unique, SEO-friendly product slugs embedded with UUIDs.
 
-## 🧠 Business Logic & System Workflows
+## Business Logic & System Workflows
 
 ### 1. The Split-Order Architecture
 When a buyer places items from multiple different sellers into a single cart and initiates a checkout, the system does not create a monolithic order. Instead, the transaction engine groups the cart items by `seller_id`. It then generates distinct, independent `Order` records for each seller. This allows each seller to update their logistics status independently without interfering with other sellers' fulfillment processes.
@@ -26,7 +26,7 @@ To preserve financial audit trails and prevent `IntegrityError` on foreign keys,
 
 ---
 
-## 🗄️ Database Schema
+## Database Schema
 
 ### Entity Relationship Diagram (ERD)
 > **Note:** Below is the visual representation of the database schema.
@@ -100,7 +100,7 @@ The database is heavily normalized to ensure data integrity across the marketpla
 
 ---
 
-## 🛡️ Automated Testing & Quality Assurance
+## Automated Testing & Quality Assurance
 
 This backend is safeguarded by a comprehensive **End-to-End (E2E) Test Suite** built with `pytest`. The test architecture utilizes isolated SQLite in-memory databases with session rollbacks, ensuring zero data leakage between test executions.
 
@@ -113,7 +113,7 @@ This backend is safeguarded by a comprehensive **End-to-End (E2E) Test Suite** b
 
 ---
 
-## 🚀 Installation & Initialization
+## Installation & Initialization
 
 1. Clone the repository and navigate to the root directory.
 2. Initialize and activate a Python virtual environment[cite: 8].
@@ -141,7 +141,7 @@ This backend is safeguarded by a comprehensive **End-to-End (E2E) Test Suite** b
 
 ---
 
-## 🧪 Interactive API Documentation (Swagger)
+## Interactive API Documentation (Swagger)
 
 This system is thoroughly documented using **Flasgger**. 
 
@@ -185,7 +185,7 @@ Below is the testing matrix covering all core functionalities.
 
 ---
 
-## 📮 Postman E2E Workflow & Security Testing
+## Postman E2E Workflow & Security Testing
 
 While Swagger UI provides excellent endpoint-level interaction, the complete business lifecycles and security edge cases (Negative Testing) are documented and tested using Postman. This collection contains a comprehensive suite of API requests divided into 5 core testing modules:
 
@@ -204,12 +204,12 @@ Click the badge below to access the complete JSON collection. You can import thi
 
 ---
 
-## 🛣️ Future Enhancements
+## Future Enhancements
 
 To further optimize the marketplace ecosystem and elevate the system to enterprise-grade standards, the following features are planned for future iterations:
 
-*   **Advanced Authentication:** Implementing a dual-token JWT architecture (Access & Refresh Tokens) with Token Freshness to improve UX and secure sensitive endpoints.
-*   **Object-Oriented Validation (DTOs):** Refactoring procedural validation into Marshmallow schemas for stricter data integrity and centralized error handling.
-*   **Database Schema Stability:** Integrating Flask-Migrate (Alembic) with explicit SQLAlchemy naming conventions to ensure safe, crash-free database evolutions.
+*   **Advanced Authentication:** Implementing a dual-token `JWT architecture (Access & Refresh Tokens)` with Token Freshness to improve UX and secure sensitive endpoints.
+*   **Object-Oriented Validation (DTOs):** Refactoring procedural validation into `Marshmallow` schemas for stricter data integrity and centralized error handling.
+*   **Database Schema Stability:** Integrating `Flask-Migrate` (Alembic) with explicit SQLAlchemy naming conventions to ensure safe, crash-free database evolutions.
 *   **Rate Limiting:** Adding `Flask-Limiter` to protect authentication and transaction endpoints against brute-force attacks.
-*   **Direct Checkout API:** Building a decoupled "Buy Now" route to bypass the cart state, reducing user friction for single-item purchases.
+*   **Direct Checkout API:** Building a decoupled `"Buy Now"` route to bypass the cart state, reducing user friction for single-item purchases.
