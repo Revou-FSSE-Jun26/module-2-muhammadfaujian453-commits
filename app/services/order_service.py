@@ -112,3 +112,23 @@ def update_order_status(order_id, requester_id, requester_role, validated_data):
         db.session.rollback()
         print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
+
+def delete_order(order_id, requester_id, requester_role):
+    order = db.session.get(Orders, order_id)
+    if not order:
+        return None, {"message": "Order not found", "status_code": 404}
+
+    if requester_role != 'admin' and order.user_id != requester_id and order.seller_id != requester_id:
+        return None, {"message": "Unauthorized! You can only delete your own orders.", "status_code": 403}
+
+    if order.status != 'cancelled':
+        return None, {"message": "Order is not cancelled (immutable constraint)", "status_code": 400}
+
+    try:
+        db.session.delete(order)
+        db.session.commit()
+        return True, None
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        return None, {"message": "A database error occurred processing your request.", "status_code": 500}

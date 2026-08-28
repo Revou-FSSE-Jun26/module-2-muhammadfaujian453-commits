@@ -1,4 +1,4 @@
-from app.models import Users, Categories, Sellers, Products
+from app.models import Users, Categories, Sellers, Products, Orders, OrderItems
 from app.utils import db
 
 def setup_product_prerequisites(client, app):
@@ -29,82 +29,114 @@ def setup_product_prerequisites(client, app):
 # =========================================================================
 # TEST CASES
 # =========================================================================
-def test_create_product_success(client, app):
-    """Scenario: Successfully create a product and generate a UUID slug (201)"""
-    token, cat_id = setup_product_prerequisites(client, app)
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    payload = {
-        "category_id": cat_id,
-        "name": "Laptop Pro",
-        "price": 15000000,
-        "stock": 10
-    }
-    
-    res = client.post('/products', json=payload, headers=headers)
-    assert res.status_code == 201
-    assert "laptop-pro" in res.get_json()["product"]["slug"] # Test auto slug generation
+class TestProductAPI:
+    def test_create_product_success(self, client, app):
+        """Scenario: Successfully create a product and generate a UUID slug (201)"""
+        token, cat_id = setup_product_prerequisites(client, app)
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        payload = {
+            "category_id": cat_id,
+            "name": "Laptop Pro",
+            "price": 15000000,
+            "stock": 10
+        }
+        
+        res = client.post('/products', json=payload, headers=headers)
+        assert res.status_code == 201
+        assert "laptop-pro" in res.get_json()["product"]["slug"] # Test auto slug generation
 
-def test_create_product_forbidden_non_seller(client, app):
-    """Scenario: Regular user attempts to create a product (403)"""
-    with app.app_context():
-        user = Users(email="buyer@test.com", full_name="Buyer", role="user")
-        user.set_password("password123")
-        db.session.add(user)
-        db.session.commit()
-    
-    res_login = client.post('/auth/login', json={"email": "buyer@test.com", "password": "password123"})
-    token = res_login.get_json()["token"]
-    
-    res = client.post('/products', json={"category_id": 1, "name": "Fake Product", "price": 10}, headers={"Authorization": f"Bearer {token}"})
-    assert res.status_code == 403
+    def test_create_product_forbidden_non_seller(self, client, app):
+        """Scenario: Regular user attempts to create a product (403)"""
+        with app.app_context():
+            user = Users(email="buyer@test.com", full_name="Buyer", role="user")
+            user.set_password("password123")
+            db.session.add(user)
+            db.session.commit()
+        
+        res_login = client.post('/auth/login', json={"email": "buyer@test.com", "password": "password123"})
+        token = res_login.get_json()["token"]
+        
+        res = client.post('/products', json={"category_id": 1, "name": "Fake Product", "price": 10}, headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 403
 
-def test_get_products_with_filters(client, app):
-    """Scenario: Test dynamic search filters and price range"""
-    token, cat_id = setup_product_prerequisites(client, app)
-    client.post('/products', json={
-        "category_id": cat_id,
-        "name": "Laptop Pro",
-        "price": 15000000,
-        "stock": 10
-    }, headers={"Authorization": f"Bearer {token}"})
+    def test_get_products_with_filters(self, client, app):
+        """Scenario: Test dynamic search filters and price range"""
+        token, cat_id = setup_product_prerequisites(client, app)
+        client.post('/products', json={
+            "category_id": cat_id,
+            "name": "Laptop Pro",
+            "price": 15000000,
+            "stock": 10
+        }, headers={"Authorization": f"Bearer {token}"})
 
-    res = client.get('/products?name=Laptop&min_price=10000000&max_price=20000000')
-    assert res.status_code == 200
-    assert len(res.get_json()["data"]) >= 1
+        res = client.get('/products?name=Laptop&min_price=10000000&max_price=20000000')
+        assert res.status_code == 200
+        assert len(res.get_json()["data"]) >= 1
 
-def test_update_and_delete_product(client, app):
-    """Scenario: Test ownership RBAC during update and delete operations"""
-    token, cat_id = setup_product_prerequisites(client, app)
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    client.post('/products', json={
-        "category_id": cat_id,
-        "name": "Laptop",
-        "price": 15000000,
-        "stock": 10
-    }, headers=headers)
+    def test_update_and_delete_product(self, client, app):
+        """Scenario: Test ownership RBAC during update and delete operations"""
+        token, cat_id = setup_product_prerequisites(client, app)
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        client.post('/products', json={
+            "category_id": cat_id,
+            "name": "Laptop",
+            "price": 15000000,
+            "stock": 10
+        }, headers=headers)
 
-    res_list = client.get('/products?name=Laptop')
-    prod_id = res_list.get_json()["data"][0]["id"]
+        res_list = client.get('/products?name=Laptop')
+        prod_id = res_list.get_json()["data"][0]["id"]
 
-    res_put = client.put(f'/products/{prod_id}', json={"stock": 50}, headers=headers)
-    assert res_put.status_code == 200
-    assert res_put.get_json()["product"]["stock"] == 50
+        res_put = client.put(f'/products/{prod_id}', json={"stock": 50}, headers=headers)
+        assert res_put.status_code == 200
+        assert res_put.get_json()["product"]["stock"] == 50
 
-    res_del = client.delete(f'/products/{prod_id}', headers=headers)
-    assert res_del.status_code == 200
+        res_del = client.delete(f'/products/{prod_id}', headers=headers)
+        assert res_del.status_code == 200
 
-def test_create_product_negative_value(client, app):
-    """Scenario: Reject product creation with negative price or stock (400)"""
-    token, cat_id = setup_product_prerequisites(client, app)
-    
-    payload = {
-        "category_id": cat_id,
-        "name": "Minus Product",
-        "price": -15000, # Data ilegal
-        "stock": -5      # Data ilegal
-    }
-    
-    res = client.post('/products', json=payload, headers={"Authorization": f"Bearer {token}"})
-    assert res.status_code == 400
+    def test_create_product_negative_value(self, client, app):
+        """Scenario: Reject product creation with negative price or stock (400)"""
+        token, cat_id = setup_product_prerequisites(client, app)
+        
+        payload = {
+            "category_id": cat_id,
+            "name": "Minus Product",
+            "price": -15000, # Data ilegal
+            "stock": -5      # Data ilegal
+        }
+        
+        res = client.post('/products', json=payload, headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 400
+
+    def test_delete_product_active_order_guard(self, client, app):
+        """Ensure product tied to active order cannot be deleted (409)"""
+        token, cat_id = setup_product_prerequisites(client, app)
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # Create Product
+        res_prod = client.post('/products', json={"category_id": cat_id, "name": "Guard Test Item", "price": 100, "stock": 5}, headers=headers)
+        prod_id = res_prod.get_json()["product"]["id"]
+
+        # Create Buyer & Setup Order
+        with app.app_context():
+            buyer = Users(email="guard_buyer@test.com", full_name="Buyer", role="user")
+            buyer.set_password("pass")
+            db.session.add(buyer)
+            db.session.commit()
+            
+            # Inject an active order directly for the test
+            seller = Users.query.filter_by(email="prod_seller@test.com").first()
+            order = Orders(user_id=buyer.id, seller_id=seller.id, shipping_address="Test", total_amount=100, status="pending")
+            db.session.add(order)
+            db.session.flush()
+            db.session.add(OrderItems(order_id=order.id, product_id=prod_id, quantity=1, unit_price=100))
+            db.session.commit()
+
+        # Attempt to delete the product
+        res_delete = client.delete(f'/products/{prod_id}', headers=headers)
+        assert res_delete.status_code == 409
+        assert "tied to one or more active orders" in res_delete.get_json()["error"]
+
+
