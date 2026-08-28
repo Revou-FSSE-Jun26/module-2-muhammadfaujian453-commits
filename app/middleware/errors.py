@@ -1,8 +1,6 @@
 from flask import jsonify
 
 def register_error_handlers(app):
-    """Register global error handlers that return JSON instead of HTML."""
-
     @app.errorhandler(400)
     def bad_request(error):
         return jsonify({

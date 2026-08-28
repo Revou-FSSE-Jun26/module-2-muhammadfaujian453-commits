@@ -1,5 +1,5 @@
-from models import Users, Categories, Products, Sellers
-from utils import db
+from app.models import Users, Categories, Products, Sellers
+from app.utils import db
 
 # =========================================================================
 # HELPER FUNCTION
@@ -108,7 +108,7 @@ def test_seller_forbidden_to_cancel(client, app):
 def test_checkout_empty_cart(client, app):
     """Scenario: Reject checkout execution when user's cart is empty (400)"""
     with app.app_context():
-        from models import Users
+        from app.models import Users
         b2 = Users(email="empty_buyer@test.com", full_name="Empty Buyer", role="user")
         b2.set_password("pass")
         db.session.add(b2)
@@ -132,7 +132,7 @@ def test_idor_prevent_buyer_accessing_others_order(client, app):
 
     # Create a completely new Buyer 2
     with app.app_context():
-        from models import Users
+        from app.models import Users
         b2 = Users(email="hacker@test.com", full_name="Malicious Buyer", role="user")
         b2.set_password("pass")
         db.session.add(b2)

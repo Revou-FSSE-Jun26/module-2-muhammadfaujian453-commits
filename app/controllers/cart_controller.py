@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import insert, update, delete
-from utils import db
-from models import Carts, Products, cart_items
+from app.utils import db
+from app.models import Carts, Products, cart_items
 from sqlalchemy.exc import SQLAlchemyError
 
 cart_bp = Blueprint('cart', __name__, url_prefix='/carts')

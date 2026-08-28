@@ -1,5 +1,5 @@
-from models import Users, Sellers
-from utils import db
+from app.models import Users, Sellers
+from app.utils import db
 
 # =========================================================================
 # HELPER

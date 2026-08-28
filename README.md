@@ -119,7 +119,7 @@ This backend is safeguarded by a comprehensive **End-to-End (E2E) Test Suite** b
 2. Initialize and activate a Python virtual environment[cite: 8].
 3. Install the necessary dependencies[cite: 8]:
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements-dev.txt
    ```
 4. Configure your `.env` file with the required environment variables:
    ```env

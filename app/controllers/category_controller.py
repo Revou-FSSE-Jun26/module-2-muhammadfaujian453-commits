@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-from utils import db
-from models import Categories
+from app.utils import db
+from app.models import Categories
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from validation import validate_category_data
-from auth import roles_required
+from app.validation import validate_category_data
+from app.middleware.auth import roles_required
 
 category_bp = Blueprint('category', __name__, url_prefix='/categories')
 

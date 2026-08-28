@@ -1,9 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from utils import db
-from models import Products, Categories
-from auth import seller_required
-from validation import validate_product_data
+from app.utils import db
+from app.models import Products, Categories
+from app.middleware.auth import seller_required
+from app.validation import validate_product_data
 from sqlalchemy.exc import SQLAlchemyError
 import re
 import uuid

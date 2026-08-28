@@ -13,5 +13,9 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'default-secret-key-fallback')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+
+    if not JWT_SECRET_KEY:
+        raise ValueError("JWT_SECRET_KEY is not configured in .env file!")
+
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)

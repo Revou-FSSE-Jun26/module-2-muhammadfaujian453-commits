@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
-from utils import db
-from models import Orders, OrderItems, Carts, cart_items, Products
+from app.utils import db
+from app.models import Orders, OrderItems, Carts, cart_items, Products
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import insert, delete
 

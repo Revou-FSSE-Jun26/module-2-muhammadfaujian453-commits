@@ -3,10 +3,12 @@ from flask_cors import CORS
 from sqlalchemy.exc import SQLAlchemyError
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
-from errors import register_error_handlers
+from app.middleware.errors import register_error_handlers
 from flasgger import Swagger
-from config import Config
-from utils import db
+from app.config import Config
+from app.utils import db
+from app.models import Users, Sellers, Categories, Products, Carts, cart_items, Orders, OrderItems
+from app.controllers import auth_bp, users_bp, category_bp, seller_bp, product_bp, cart_bp, order_bp
 
 def create_app(test_config=None):
     print("Initializing the Flask application...")
@@ -15,20 +17,15 @@ def create_app(test_config=None):
 
     # Load configuration from config.py
     app.config.from_object(Config)
-
     if test_config:
         app.config.update(test_config)
 
     # Initializing db with application
     db.init_app(app)
-
     # Setup Flask-Migrate
-    migrate = Migrate(app, db)
-
+    Migrate(app, db)
     # Initializing JWT
-    jwt = JWTManager(app)
-
-
+    JWTManager(app)
     
     swagger_template = {
         "securityDefinitions": {
@@ -42,18 +39,7 @@ def create_app(test_config=None):
     }
 
     # Initializing Swagger
-    swagger = Swagger(app, template=swagger_template)
-
-    # Import models
-    from models import Users, Sellers, Categories, Products, Orders, OrderItems
-
-    # Import routes
-    from routes.auth_routes import auth_bp, users_bp
-    from routes.category_routes import category_bp
-    from routes.seller_routes import seller_bp
-    from routes.product_routes import product_bp
-    from routes.cart_routes import cart_bp
-    from routes.order_routes import order_bp
+    Swagger(app, template=swagger_template)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
@@ -88,9 +74,3 @@ def create_app(test_config=None):
     register_error_handlers(app)
 
     return app
-
-# Application development execution
-app = create_app()
-
-if __name__ == '__main__':
-    app.run(debug=True)

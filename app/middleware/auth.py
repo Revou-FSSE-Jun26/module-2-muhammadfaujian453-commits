@@ -1,7 +1,7 @@
 import bcrypt
 from functools import wraps
 from flask import jsonify
-from utils import db
+from app.utils import db
 from flask_jwt_extended import get_jwt, verify_jwt_in_request, get_jwt_identity
 
 # =========================================================================
@@ -21,10 +21,6 @@ def check_password(password: str, hashed_password: str) -> bool:
 # JWT AUTHORIZATION MIDDLEWARE
 # =========================================================================
 def roles_required(*allowed_roles):
-    """
-    Decorator that checks if the current user has one of the allowed roles.
-    Extracts the role claim directly from the JWT payload.
-    """
     def wrapper(fn):
         @wraps(fn)
         def decorator(*args, **kwargs):
@@ -47,14 +43,10 @@ def roles_required(*allowed_roles):
     return wrapper
 
 def seller_required():
-    """
-    Decorator must be ensure the authenticated user has a registered active store.
-    Must be used AFTER @jwt_required().
-    """
     def wrapper(fn):
         @wraps(fn)
         def decorator(*args, **kwargs):
-            from models import Sellers
+            from app.models import Sellers
             verify_jwt_in_request()
             user_id = int(get_jwt_identity())
 

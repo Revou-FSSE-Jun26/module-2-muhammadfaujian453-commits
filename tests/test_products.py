@@ -1,5 +1,5 @@
-from models import Users, Categories, Sellers, Products
-from utils import db
+from app.models import Users, Categories, Sellers, Products
+from app.utils import db
 
 def setup_product_prerequisites(client, app):
     """Prepare Category and Seller Store, then return Token & Category ID"""

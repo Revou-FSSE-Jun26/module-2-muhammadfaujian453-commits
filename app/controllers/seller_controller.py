@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from utils import db
-from models import Sellers, Products
+from app.utils import db
+from app.models import Sellers, Products
 from sqlalchemy.exc import SQLAlchemyError
-from validation import validate_store_data
-from auth import seller_required
+from app.validation import validate_store_data
+from app.middleware.auth import seller_required
 
 # Blueprint
 seller_bp = Blueprint('seller', __name__, url_prefix='/sellers')

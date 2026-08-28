@@ -1,5 +1,5 @@
-from models import Users, Categories, Products
-from utils import db
+from app.models import Users, Categories, Products
+from app.utils import db
 
 # =========================================================================
 # HELPER FUNCTION

@@ -1,3 +1,4 @@
+# TODO(Phase 5): remove once all controllers are migrated to Marshmallow schemas (app/schemas/).
 import re
 
 # Helper Function for validate user registration
