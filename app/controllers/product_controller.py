@@ -1,25 +1,17 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.utils import db
-from app.models import Products, Categories
 from app.middleware.auth import seller_required
-from app.validation import validate_product_data
-from sqlalchemy.exc import SQLAlchemyError
-import re
-import uuid
+from app.schemas import ProductCreateSchema, ProductUpdateSchema, ProductResponseSchema
+from app.services import product_service
 
+# Blueprint
 product_bp = Blueprint('product', __name__, url_prefix='/products')
 
-# =========================================================================
-# HELPER FUNCTION: SLUG GENERATOR
-# =========================================================================
-def generate_unique_slug(name):
-    """Auto generate unique slug """
-    # Delete non-alfanumerik character, change space into slash, and change to lowercase
-    base_slug = re.sub(r'[^a-zA-Z0-9\s-]', '', name).strip().lower()
-    base_slug = re.sub(r'[-\s]+', '-', base_slug)
-    # Add 8 UUID character
-    return f"{base_slug}-{str(uuid.uuid4())[:8]}"
+# Schemas
+create_schema = ProductCreateSchema()
+update_schema = ProductUpdateSchema()
+response_schema = ProductResponseSchema()
+list_response_schema = ProductResponseSchema(many=True)
 
 # =========================================================================
 # PRODUCT MODULE (BLUEPRINT: product_bp | PREFIX: /products)
@@ -74,45 +66,17 @@ def create_product():
         description: Internal server error
     """
     data = request.get_json(silent=True) or {}
+    validated_data = create_schema.load(data)
     seller_id = int(get_jwt_identity())
 
-    # Structural Validation
-    validation_errors = validate_product_data(data, is_update=False)
-    if validation_errors:
-        return jsonify({
-            "error": "Validation failed",
-            "details": validation_errors
-        }), 400
+    product, error = product_service.create_product(seller_id, validated_data)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
 
-    # Business Logic Validation
-    category_id = data.get('category_id')
-    category = db.session.get(Categories, category_id)
-    if not category:
-        return jsonify({"error": f"Category with ID {category_id} not found!"}), 404
-
-    product_name = data.get('name')
-
-    try:
-        new_product = Products(
-            category_id=category_id,
-            seller_id=seller_id,
-            name=product_name,
-            slug=generate_unique_slug(product_name),
-            description=data.get('description'),
-            price=data.get('price'),
-            stock=data.get('stock', 0),
-            image_url=data.get('image_url')
-        )
-        db.session.add(new_product)
-        db.session.commit()
-
-        return jsonify({"message": "Product successfully created!", "product": new_product.to_dict()}), 201
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
-        
+    return jsonify({
+        "message": "Product successfully created!", 
+        "product": response_schema.dump(product)
+    }), 201
     
 # B. Get all product list route
 @product_bp.route('', methods=['GET'])
@@ -151,42 +115,28 @@ def get_products():
     """
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 10, type=int)
-    category_id = request.args.get('category_id', type=int)
-    search_name = request.args.get('name', type=str)
-    min_price = request.args.get('min_price', type=float)
-    max_price = request.args.get('max_price', type=float)
 
-    try:
-        query = Products.query.filter_by(is_active=True)
+    filters = {
+        'category_id': request.args.get('category_id', type=int),
+        'name': request.args.get('name', type=str),
+        'min_price': request.args.get('min_price', type=float),
+        'max_price': request.args.get('max_price', type=float)
+    }
 
-        if category_id:
-            query = query.filter_by(category_id=category_id)
-        if search_name:
-            query = query.filter(Products.name.ilike(f"%{search_name}%"))
-        if min_price is not None:
-            query = query.filter(Products.price >= min_price)
-        if max_price is not None:
-            query = query.filter(Products.price <= max_price)
+    paginated_data = product_service.get_products(filters, page, limit)
 
-        paginated_data = query.paginate(page=page, per_page=limit, error_out=False)
-
-        return jsonify({
-            "message": "Products retrieved successfully",
-            "data": [product.to_dict() for product in paginated_data.items],
-            "meta": {
-                "current_page": paginated_data.page,
-                "total_pages": paginated_data.pages,
-                "total_items": paginated_data.total,
-                "items_per_page": paginated_data.per_page,
-                "has_next": paginated_data.has_next, 
-                "has_prev": paginated_data.has_prev
-            }
-        }), 200
-    
-    except SQLAlchemyError as e:
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
-        
+    return jsonify({
+        "message": "Products retrieved successfully",
+        "data": list_response_schema.dump(paginated_data.items),
+        "meta": {
+            "current_page": paginated_data.page,
+            "total_pages": paginated_data.pages,
+            "total_items": paginated_data.total,
+            "items_per_page": paginated_data.per_page,
+            "has_next": paginated_data.has_next, 
+            "has_prev": paginated_data.has_prev
+        }
+    }), 200       
 
 # C. Get specific product by its ID route
 @product_bp.route('/<int:product_id>', methods=['GET'])
@@ -208,17 +158,14 @@ def get_product_by_id(product_id):
       500:
         description: Internal server error
     """
-    try:
-        product = Products.query.filter_by(id=product_id, is_active=True).first()
-        if not product:
-            return jsonify({"error": "Product not found or is no longer active!"}), 404
+    product, error = product_service.get_product_by_id(product_id)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
 
-        return jsonify({"message": "Product retrieved successfully", "product": product.to_dict()}), 200
-
-    except SQLAlchemyError as e:
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
-        
+    return jsonify({
+        "message": "Product retrieved successfully", 
+        "product": response_schema.dump(product)
+    }), 200        
 
 # D. Update product route
 @product_bp.route('/<int:product_id>', methods=['PUT'])
@@ -269,49 +216,17 @@ def update_product(product_id):
         description: Internal server error
     """
     data = request.get_json(silent=True) or {}
+    validated_data = update_schema.load(data)
     seller_id = int(get_jwt_identity())
 
-    # Structural Validation (is_update=True)
-    validation_errors = validate_product_data(data, is_update=True)
-    if validation_errors:
-        return jsonify({"error": "Validation failed", "details": validation_errors}), 400
+    product, error = product_service.update_product(product_id, seller_id, validated_data)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
 
-    try:
-        product = Products.query.filter_by(id=product_id, is_active=True).first()
-        if not product:
-            return jsonify({"error": "Product not found or inactive!"}), 404
-
-        if product.seller_id != seller_id:
-            return jsonify({"error": "Unauthorized! You do not own this product."}), 403
-
-        if 'category_id' in data:
-            if not Categories.query.get(data.get('category_id')):
-                return jsonify({"error": f"Category ID {data.get('category_id')} not found!"}), 404
-            product.category_id = data.get('category_id')
-            
-        if 'name' in data:
-            new_name = data.get('name')
-            if new_name != product.name:
-                product.name = new_name
-                product.slug = generate_unique_slug(new_name)
-        if 'description' in data:
-            product.description = data.get('description')
-        if 'price' in data:
-            product.price = data.get('price')
-        if 'stock' in data:
-            product.stock = data.get('stock')
-        if 'image_url' in data:
-            product.image_url = data.get('image_url')
-
-        db.session.commit()
-
-        return jsonify({"message": "Product successfully updated!", "product": product.to_dict()}), 200
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
-        
+    return jsonify({
+        "message": "Product successfully updated!", 
+        "product": response_schema.dump(product)
+    }), 200
 
 # E. Delete product route
 @product_bp.route('/<int:product_id>', methods=['DELETE'])
@@ -338,26 +253,16 @@ def delete_product(product_id):
         description: Forbidden (Unauthorized user ID or seller profile)
       404:
         description: Product not found or already deactivated
+      409:
+        description: Cannot delete, product in use by active orders
       500:
         description: Internal server error
     """
     seller_id = int(get_jwt_identity())
 
-    try:
-        product = Products.query.filter_by(id=product_id, is_active=True).first()
-        if not product:
-            return jsonify({"error": "Product not found or already deactivated!"}), 404
+    product, error = product_service.delete_product(product_id, seller_id)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
 
-        if product.seller_id != seller_id:
-            return jsonify({"error": "Unauthorized! You can only delete your own products."}), 403
-
-        product.is_active = False
-        db.session.commit()
-
-        return jsonify({"message": f"Product '{product.name}' has been successfully deactivated."}), 200
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
+    return jsonify({"message": f"Product '{product.name}' has been successfully deactivated."}), 200
         

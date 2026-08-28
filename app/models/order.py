@@ -31,18 +31,6 @@ class Orders(db.Model):
         db.CheckConstraint('total_amount >= 0', name='orders_total_amount_check'),
     )
 
-    # Function for Converting to Dictionary
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "seller_id": self.seller_id,
-            "status": self.status,
-            "total_amount": float(self.total_amount) if self.total_amount is not None else 0.0,
-            "shipping_address": self.shipping_address,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }
 
 # =========================================================================
 # MODEL ORDER ITEMS
@@ -66,12 +54,3 @@ class OrderItems(db.Model):
 
     # Relationship between Table
     product = db.relationship('Products', lazy='joined')
-
-    def to_dict(self):
-        return {
-            "product_id": self.product_id,
-            "product_name": self.product.name if self.product else "Unknown Product",
-            "quantity": self.quantity,
-            "unit_price": float(self.unit_price),
-            "subtotal": float(self.unit_price) * self.quantity
-        }

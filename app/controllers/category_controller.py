@@ -1,12 +1,18 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-from app.utils import db
-from app.models import Categories
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from app.validation import validate_category_data
 from app.middleware.auth import roles_required
+from app.schemas import CategoryCreateSchema, CategoryUpdateSchema, CategoryResponseSchema
+from app.services import category_service
 
+# Blueprint
 category_bp = Blueprint('category', __name__, url_prefix='/categories')
+
+# Schemas
+create_schema = CategoryCreateSchema()
+update_schema = CategoryUpdateSchema()
+response_schema = CategoryResponseSchema()
+list_response_schema = CategoryResponseSchema(many=True)
+
 
 # =========================================================================
 # CATEGORY MODULE (BLUEPRINT: category_bp | PREFIX: /categories)
@@ -53,36 +59,16 @@ def create_category():
         description: Internal server error
     """
     data = request.get_json(silent=True) or {}
-
-    validation_errors = validate_category_data(data, is_update=False)
-    if validation_errors:
-        return jsonify({
-            "error": "Validation failed",
-            "details": validation_errors
-        }), 400
-
-    name = data.get('name')
-    description = data.get('description')
+    validated_data = create_schema.load(data)
+    
+    category, error = category_service.create_category(validated_data)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
         
-    existing_category = Categories.query.filter_by(name=name).first()
-    if existing_category:
-        return jsonify({"error": f"Category name '{name}' already exists on the system!"}), 409
-        
-    try:
-        new_category = Categories(name=name, description=description)
-        
-        db.session.add(new_category)
-        db.session.commit()
-
-        return jsonify({
-            "message": "Category successfully created!",
-            "category": new_category.to_dict()
-        }), 201
-        
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
+    return jsonify({
+        "message": "Category successfully created!",
+        "category": response_schema.dump(category)
+    }), 201
 
 # B. Retrieve all categories route
 @category_bp.route('', methods=['GET'])
@@ -97,17 +83,12 @@ def get_categories():
         500:
             description: Internal server error
     """
-    try:
-        categories = Categories.query.all()
-        return jsonify({
-            "message": "Categories successfully retrieved!",
-            "categories": [cat.to_dict() for cat in categories]
-        }), 200
+    categories = category_service.get_all_categories()
+    return jsonify({
+        "message": "Categories successfully retrieved!",
+        "categories": list_response_schema.dump(categories)
+    }), 200
     
-    except SQLAlchemyError as e:
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
-
 # C. Update category routes
 @category_bp.route('/<int:category_id>', methods=['PUT'])
 @jwt_required()
@@ -151,44 +132,16 @@ def update_category(category_id):
         description: Internal server error
     """
     data = request.get_json(silent=True) or {}
-
-    validation_errors = validate_category_data(data, is_update=True)
-    if validation_errors:
-        return jsonify({
-            "error": "Validation failed",
-            "details": validation_errors
-        }), 400
+    validated_data = update_schema.load(data)
     
-    new_name = data.get('name')
-    new_description = data.get('description')
-    
-    try:
-        category = db.session.get(Categories, category_id)
-        if not category:
-            return jsonify({"error": "Category not found!"}), 404
-
-        if 'name' in data:
-            new_name = data.get('name')
-            if new_name != category.name:
-                duplicate_category = Categories.query.filter_by(name=new_name).first()
-                if duplicate_category:
-                    return jsonify({"error": f"Category name '{new_name}' already exists!"}), 409
-                category.name = new_name
-            
-        if 'description' in data:
-            category.description = new_description
-
-        db.session.commit()
+    category, error = category_service.update_category(category_id, validated_data)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
         
-        return jsonify({
-            "message": "Category updated successfully!", 
-            "category": category.to_dict()
-        }), 200
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
+    return jsonify({
+        "message": "Category updated successfully!",
+        "category": response_schema.dump(category)
+    }), 200
 
 # D. Delete category route
 @category_bp.route('/<int:category_id>', methods=['DELETE'])
@@ -220,23 +173,8 @@ def delete_category(category_id):
       500:
         description: Internal server error
     """
-    try:
-        category = db.session.get(Categories, category_id)
-        if not category:
-            return jsonify({"error": "Category not found!"}), 404
-
-        db.session.delete(category)
-        db.session.commit()
+    deleted_name, error = category_service.delete_category(category_id)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
         
-        return jsonify({"message": f"Category '{category.name}' deleted successfully!"}), 200
-
-    except IntegrityError:
-        db.session.rollback()
-        return jsonify({
-            "error": "Cannot delete this category because there are products currently assigned to it."
-        }), 409
-    
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
+    return jsonify({"message": f"Category '{deleted_name}' deleted successfully!"}), 200

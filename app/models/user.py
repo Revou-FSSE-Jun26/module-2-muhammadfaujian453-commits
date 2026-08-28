@@ -39,16 +39,3 @@ class Users(db.Model):
     # Function for Checking between Login Password and Hash in Database
     def check_password(self, password):
         return check_password(password, self.password_hash)
-
-    # Function for Converting to Dictionary
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "email": self.email,
-            "full_name": self.full_name,
-            "role": self.role,
-            "avatar_url": self.avatar_url,
-            "is_active": self.is_active,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }

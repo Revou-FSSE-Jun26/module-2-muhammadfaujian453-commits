@@ -16,13 +16,3 @@ class Categories(db.Model):
 
     # Relationship between Table
     products = db.relationship('Products', back_populates = 'category', lazy = 'selectin')
-
-    # Function for Converting to Dictionary
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }

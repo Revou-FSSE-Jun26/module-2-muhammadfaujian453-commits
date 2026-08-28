@@ -1,23 +1,15 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import insert, update, delete
-from app.utils import db
-from app.models import Carts, Products, cart_items
-from sqlalchemy.exc import SQLAlchemyError
+from app.schemas import CartAddItemSchema, CartUpdateItemSchema, CartResponseSchema
+from app.services import cart_service
 
+# Blueprint
 cart_bp = Blueprint('cart', __name__, url_prefix='/carts')
 
-# =========================================================================
-# HELPER FUNCTION
-# =========================================================================
-def get_or_create_cart(user_id):
-    """Search for user cart or make a new cart."""
-    cart = Carts.query.filter_by(user_id=user_id).first()
-    if not cart:
-        cart = Carts(user_id=user_id)
-        db.session.add(cart)
-        db.session.commit()
-    return cart
+# Schemas
+add_schema = CartAddItemSchema()
+update_schema = CartUpdateItemSchema()
+response_schema = CartResponseSchema()
 
 # =========================================================================
 # CART MODULE (BLUEPRINT: cart_bp | PREFIX: /carts)
@@ -62,69 +54,15 @@ def add_to_cart():
         description: Internal server error
     """
     data = request.get_json(silent=True) or {}
+    validated_data = add_schema.load(data)
     user_id = int(get_jwt_identity())
     
-    product_id = data.get('product_id')
-    quantity = data.get('quantity', 1)
+    _, error = cart_service.add_item(user_id, validated_data)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
 
-    if not product_id:
-        return jsonify({"error": "The 'product_id' field is required!"}), 400
-
-    try:
-        quantity = int(quantity)
-        if quantity <= 0:
-            return jsonify({"error": "Quantity must be greater than zero!"}), 400
-    except ValueError:
-        return jsonify({"error": "Quantity must be a valid integer!"}), 400
-
-    try:
-        # Product Validation
-        product = Products.query.filter_by(id=product_id, is_active=True).first()
-        if not product:
-            return jsonify({"error": "Product not found or is no longer active!"}), 404
-
-        # Ownership Guard
-        if product.seller_id == user_id:
-            return jsonify({"error": "You cannot add your own product to the cart!"}), 403
-
-        # Stock Guard
-        if quantity > product.stock:
-            return jsonify({"error": f"Insufficient stock! Only {product.stock} items left."}), 400
-
-        cart = get_or_create_cart(user_id)
-
-        existing_item = db.session.query(cart_items).filter(
-            cart_items.c.cart_id == cart.id,
-            cart_items.c.product_id == product_id
-        ).first()
-
-        if existing_item:
-            new_quantity = existing_item.quantity + quantity
-            if new_quantity > product.stock:
-                return jsonify({"error": f"Cannot add more. Stock limit reached ({product.stock} max)."}), 400
-            
-            stmt = update(cart_items).where(
-                cart_items.c.cart_id == cart.id,
-                cart_items.c.product_id == product_id
-            ).values(quantity=new_quantity)
-            db.session.execute(stmt)
-        else:
-            stmt = insert(cart_items).values(
-                cart_id=cart.id,
-                product_id=product_id,
-                quantity=quantity
-            )
-            db.session.execute(stmt)
-
-        db.session.commit()
-        return jsonify({"message": "Item successfully added to cart!"}), 200
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
-        
-
+    return jsonify({"message": "Item successfully added to cart!"}), 200
+    
 # B. Retrieve or vew cart route
 @cart_bp.route('', methods=['GET'])
 @jwt_required()
@@ -144,52 +82,12 @@ def view_cart():
         description: Internal server error
     """
     user_id = int(get_jwt_identity())
+    cart_data = cart_service.view_cart(user_id)
     
-    try:
-        cart = get_or_create_cart(user_id)
-        
-        # Join table between cart_items and products
-        items = (
-            db.session.query(
-                cart_items.c.product_id,
-                cart_items.c.quantity,
-                Products
-            )
-            .join(Products, Products.id == cart_items.c.product_id)
-            .filter(cart_items.c.cart_id == cart.id)
-            .all()
-        )
-
-        cart_data = []
-        total_price = 0
-
-        for product_id, quantity, product_obj in items:
-            if not product_obj.is_active:
-                continue
-                
-            subtotal = float(product_obj.price) * quantity
-            total_price += subtotal
-            
-            cart_data.append({
-                "product_id": product_id,
-                "product_name": product_obj.name,
-                "price": float(product_obj.price),
-                "quantity": quantity,
-                "subtotal": subtotal,
-                "image_url": product_obj.image_url
-            })
-
-        return jsonify({
-            "message": "Cart retrieved successfully",
-            "cart_id": cart.id,
-            "items": cart_data,
-            "total_price": total_price
-        }), 200
-
-    except SQLAlchemyError as e:
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
-        
+    return jsonify({
+        "message": "Cart retrieved successfully",
+        **response_schema.dump(cart_data)
+    }), 200
 
 # C. Update cart route
 @cart_bp.route('/items/<int:product_id>', methods=['PUT'])
@@ -229,55 +127,15 @@ def update_cart_item(product_id):
         description: Internal server error
     """
     data = request.get_json(silent=True) or {}
+    validated_data = update_schema.load(data)
     user_id = int(get_jwt_identity())
-    quantity = data.get('quantity')
 
-    if quantity is None:
-        return jsonify({"error": "The 'quantity' field is required!"}), 400
+    result, error = cart_service.update_item(user_id, product_id, validated_data)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
 
-    try:
-        quantity = int(quantity)
-        if quantity < 0:
-            return jsonify({"error": "Quantity cannot be negative!"}), 400
-    except ValueError:
-        return jsonify({"error": "Quantity must be a valid integer!"}), 400
-
-    try:
-        cart = get_or_create_cart(user_id)
-        
-        if quantity == 0:
-            stmt = delete(cart_items).where(
-                cart_items.c.cart_id == cart.id,
-                cart_items.c.product_id == product_id
-            )
-            db.session.execute(stmt)
-            db.session.commit()
-            return jsonify({"message": "Item removed from cart!"}), 200
-
-        product = Products.query.filter_by(id=product_id, is_active=True).first()
-        if not product:
-            return jsonify({"error": "Product not found or inactive!"}), 404
-            
-        if quantity > product.stock:
-            return jsonify({"error": f"Insufficient stock! Only {product.stock} items left."}), 400
-
-        stmt = update(cart_items).where(
-            cart_items.c.cart_id == cart.id,
-            cart_items.c.product_id == product_id
-        ).values(quantity=quantity)
-        
-        result = db.session.execute(stmt)
-        if result.rowcount == 0:
-            return jsonify({"error": "Item not found in your cart!"}), 404
-
-        db.session.commit()
-        return jsonify({"message": "Cart item updated successfully!"}), 200
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
-        
+    message = "Item removed from cart!" if result.get("removed") else "Cart item updated successfully!"
+    return jsonify({"message": message}), 200
 
 # D. Delete item from the cart
 @cart_bp.route('/items/<int:product_id>', methods=['DELETE'])
@@ -306,26 +164,12 @@ def delete_cart_item(product_id):
     """
     user_id = int(get_jwt_identity())
 
-    try:
-        cart = get_or_create_cart(user_id)
-        
-        stmt = delete(cart_items).where(
-            cart_items.c.cart_id == cart.id,
-            cart_items.c.product_id == product_id
-        )
-        result = db.session.execute(stmt)
-        
-        if result.rowcount == 0:
-            return jsonify({"error": "Item not found in your cart!"}), 404
+    _, error = cart_service.delete_item(user_id, product_id)
+    
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
 
-        db.session.commit()
-        return jsonify({"message": "Item successfully removed from cart!"}), 200
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
-        
+    return jsonify({"message": "Item successfully removed from cart!"}), 200
 
 # E. Delete/clear all item and its cart
 @cart_bp.route('', methods=['DELETE'])
@@ -347,17 +191,10 @@ def clear_cart():
     """
     user_id = int(get_jwt_identity())
 
-    try:
-        cart = get_or_create_cart(user_id)
+    _, error = cart_service.clear_cart(user_id)
+    
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
         
-        stmt = delete(cart_items).where(cart_items.c.cart_id == cart.id)
-        db.session.execute(stmt)
-        db.session.commit()
-        
-        return jsonify({"message": "Cart cleared successfully!"}), 200
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
+    return jsonify({"message": "Cart cleared successfully!"}), 200
         

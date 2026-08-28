@@ -1,13 +1,17 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
-from app.utils import db
-from app.models import Users
-from app.validation import validate_user_registration
-from sqlalchemy.exc import SQLAlchemyError
+from app.schemas import LoginSchema, UserRegisterSchema, UserResponseSchema
+from app.services import auth_service, user_service
 
 # Blueprint
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 users_bp = Blueprint('users', __name__, url_prefix='/users')
+
+# Schema
+login_schema = LoginSchema()
+register_schema = UserRegisterSchema()
+user_response_schema = UserResponseSchema()
+
 
 # =========================================================================
 # 1. USER MODULE (BLUEPRINT: users_bp | PREFIX: /users)
@@ -54,36 +58,16 @@ def register_user():
         description: Internal server error
     """
     data = request.get_json(silent=True) or {}
+    validated_data = register_schema.load(data)
 
-    validation_errors = validate_user_registration(data)
-    if validation_errors:
-        return jsonify({"error": "Validation failed", "details": validation_errors}), 400
+    user, error = user_service.register_user(validated_data)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
 
-    email = data.get('email')
-    password = data.get('password')
-    full_name = data.get('full_name')
-    avatar_url = data.get('avatar_url')
-
-    existing_user = Users.query.filter_by(email=email).first()
-    if existing_user:
-        return jsonify({"error": "Email already registered on the system!"}), 409
-
-    try:
-        new_user = Users(email=email, full_name=full_name, avatar_url=avatar_url)
-        new_user.set_password(password)
-
-        db.session.add(new_user)
-        db.session.commit()
-
-        return jsonify({
-            "message": "User registration successful",
-            "user": new_user.to_dict()
-        }), 201
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
+    return jsonify({
+        "message": "User registration successful",
+        "user": user_response_schema.dump(user)
+    }), 201
 
 
 # B. Retrieve Specific User Route
@@ -117,25 +101,16 @@ def get_user_by_id(user_id):
     
     # Identity extraction from JWT Token
     requester_id = int(get_jwt_identity())
-    claims = get_jwt()
-    requester_role= claims.get('role')
+    requester_role= get_jwt().get('role')
 
-    try:
-        user = db.session.get(Users, user_id)
-        if not user or not user.is_active:
-            return jsonify({"error": f"Active user with ID {user_id} not found!"}), 404
-
-        if requester_id != user_id and requester_role != 'admin':
-            return jsonify({"error": "Unauthorized! You can only view your own profile data unless you are an admin."}), 403
-    
-        return jsonify({
-            "message": "User data successfully retrieved!",
-            "user": user.to_dict()
-        }), 200
-    
-    except SQLAlchemyError as e:
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
+    user, error = user_service.get_user_by_id(user_id, requester_id, requester_role)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
+        
+    return jsonify({
+        "message": "User data successfully retrieved!",
+        "user": user_response_schema.dump(user)
+    }), 200
 
 # C. Delete User Account Route
 @users_bp.route('/<int:user_id>', methods=['DELETE'])
@@ -168,33 +143,15 @@ def delete_user(user_id):
 
     # Identity extraction from JWT Token
     requester_id = int(get_jwt_identity())
-    claims = get_jwt()
-    requester_role = claims.get('role')
+    requester_role = get_jwt().get('role')
 
-    try:
-        user = db.session.get(Users, user_id)
-        if not user or not user.is_active:
-            return jsonify({"error": f"Active user with ID {user_id} not found!"}), 404
-
-        if requester_id != user_id and requester_role != 'admin':
-            return jsonify({"error": "Unauthorized! You can only delete your own account unless you are an admin."}), 403
-
-        user.is_active = False
-
-        if user.seller_profile:
-            user.seller_profile.is_active = False
-
-            for product in user.seller_profile.products:
-                product.is_active = False
-
-        db.session.commit()
-
-        return jsonify({"error": f"User with ID {user_id} and its associated data successfully deactivated"}), 200
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
+    _, error = user_service.delete_user(user_id, requester_id, requester_role)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
+        
+    return jsonify({
+        "message": f"User with ID {user_id} and its associated data successfully deactivated"
+        }), 200
 
 # D. Retrieve Current Authenticated User Route
 @users_bp.route('/me', methods=['GET'])
@@ -217,20 +174,15 @@ def get_current_user():
         description: Internal server error
     """
     user_id = int(get_jwt_identity())
+    user, error = user_service.get_current_user(user_id)
 
-    try:
-        user = db.session.get(Users, user_id)
-        if not user or not user.is_active:
-            return jsonify({"error": "Active user not found!"}), 404
-    
-        return jsonify({
-            "message": "Current user data successfully retrieved!",
-            "user": user.to_dict()
-        }), 200
-    
-    except SQLAlchemyError as e:
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
-        return jsonify({"error": "A database error occurred processing your request."}), 500
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
+        
+    return jsonify({
+        "message": "Current user data successfully retrieved!",
+        "user": user_response_schema.dump(user)
+    }), 200
 
 # =========================================================================
 # 2. AUTH MODULE (BLUEPRINT: auth_bp | PREFIX: /auth)
@@ -269,40 +221,14 @@ def login():
         description: Internal server error
     """
     data = request.get_json(silent=True) or {}
+    validated_data = login_schema.load(data)
 
-    email = data.get('email')
-    password = data.get('password')
-
-    if not email or not password:
-        return jsonify({"error": 'Missing email or password'}), 400
-
-    # Retrieve user and verify password
-    user = Users.query.filter_by(email=email).first()
-
-    if user is None or not user.check_password(password):
-        return jsonify({"error": 'Invalid email or password'}), 401
-
-    message = 'Login successful'
-    if not user.is_active:
-        user.is_active = True
-
-        if user.seller_profile:
-            user.seller_profile.is_active = True
-
-            for product in user.seller_profile.products:
-                product.is_active = True
-
-        db.session.commit()
-        message = 'Login successful. Your account has been reactivated!'
-
-    # Generate JWT Token carrying the user's ID and Role
-    token = create_access_token(
-        identity=str(user.id),
-        additional_claims={"role": user.role}
-    )
-
+    result, error = auth_service.authenticate_user(validated_data['email'], validated_data['password'])
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
+        
     return jsonify({
-        "message": 'Login successful',
-        "token": token,
-        'user': user.to_dict()
+        "message": result["message"],
+        "token": result["token"],
+        "user": user_response_schema.dump(result["user"])
     }), 200

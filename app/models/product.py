@@ -32,20 +32,3 @@ class Products(db.Model):
         db.CheckConstraint('price >= 0', name='products_price_check'),
         db.CheckConstraint('stock >= 0', name='products_stock_check'),
     )
-
-    # Function for Converting to Dictionary
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "category_id": self.category_id,
-            "seller_id": self.seller_id,
-            "name": self.name,
-            "slug": self.slug,
-            "description": self.description,
-            "price": float(self.price) if self.price is not None else 0.0,
-            "stock": self.stock,
-            "image_url": self.image_url,
-            "is_active": self.is_active,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }

@@ -21,15 +21,3 @@ class Sellers(db.Model):
     # Relationship between Table
     user = db.relationship('Users', back_populates = 'seller_profile')
     products = db.relationship('Products', back_populates = 'seller', lazy = 'selectin')
-
-    # Function for Converting to Dictionary
-    def to_dict(self):
-        return {
-            "id": self.id,  # id toko ini bernilai sama dengan id user pemiliknya
-            "store_name": self.store_name,
-            "store_description": self.store_description,
-            "avatar_url": self.avatar_url,
-            "is_active": self.is_active,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }

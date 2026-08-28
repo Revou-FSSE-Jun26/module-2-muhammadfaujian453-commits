@@ -30,12 +30,3 @@ class Carts(db.Model):
     # Relationship between Table
     user = db.relationship('Users', back_populates = 'cart')
     items = db.relationship('Products', secondary = cart_items, lazy = 'selectin', backref=  db.backref('carts', lazy='selectin'))
-
-    # Function for Converting to Dictionary
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }
