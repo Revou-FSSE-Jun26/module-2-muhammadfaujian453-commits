@@ -125,7 +125,9 @@ def get_my_orders():
             "current_page": paginated_orders.page,
             "total_pages": paginated_orders.pages,
             "total_items": paginated_orders.total,
-            "per_page": paginated_orders.per_page
+            "items_per_page": paginated_orders.per_page,
+            "has_next": paginated_orders.has_next, 
+            "has_prev": paginated_orders.has_prev
         }
     }), 200
     
