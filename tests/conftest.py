@@ -9,7 +9,8 @@ def app_instance():
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
         "WTF_CSRF_ENABLED": False,
-        "JWT_SECRET_KEY": "ini-adalah-kunci-rahasia-untuk-testing-minimal-32-karakter"
+        "JWT_SECRET_KEY": "this-is-the-secret-key-for-testing-minimum-32-characters",
+        "RATELIMIT_ENABLED": False
     })
 
     # SQLite Database Setup in RAM
