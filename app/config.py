@@ -13,9 +13,16 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 280,
+    }
+
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 
     if not JWT_SECRET_KEY:
         raise ValueError("JWT_SECRET_KEY is not configured in .env file!")
 
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+
+    CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*')
