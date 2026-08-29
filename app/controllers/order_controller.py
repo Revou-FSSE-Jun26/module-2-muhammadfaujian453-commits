@@ -88,6 +88,14 @@ def get_my_orders():
         enum: [asc, desc]
         default: desc
         description: Sort orders by creation date
+      - in: query
+        name: page
+        type: integer
+        default: 1
+      - in: query
+        name: limit
+        type: integer
+        default: 10
     responses:
       200:
         description: List of user's orders
@@ -102,15 +110,23 @@ def get_my_orders():
     status_filter = request.args.get('status', type=str)
     product_search = request.args.get('product', type=str)
     sort = request.args.get('sort', 'desc', type=str).lower()
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 10, type=int)
 
     if sort not in ('asc', 'desc'):
         return jsonify({"error": "Invalid 'sort' value. Must be 'asc' or 'desc'."}), 400
 
-    orders = order_service.get_my_orders(user_id, status_filter, product_search, sort)
+    paginated_orders = order_service.get_my_orders(user_id, status_filter, product_search, sort, page, limit)
         
     return jsonify({
         "message": "Orders retrieved successfully",
-        "orders": list_response_schema.dump(orders) 
+        "orders": list_response_schema.dump(paginated_orders.items),
+        "meta": {
+            "current_page": paginated_orders.page,
+            "total_pages": paginated_orders.pages,
+            "total_items": paginated_orders.total,
+            "per_page": paginated_orders.per_page
+        }
     }), 200
     
 # C. Get specific order details and its item

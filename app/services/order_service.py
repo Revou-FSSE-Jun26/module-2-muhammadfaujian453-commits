@@ -8,15 +8,6 @@ from app.utils import db
 
 
 def checkout(user_id, validated_data):
-    """
-    Convert the user's cart into one Order PER SELLER (split-order logic).
-
-    WARNING: `.with_for_update(of=Products)` below takes a database row lock
-    on each product before checking stock. Do NOT remove this while moving
-    code around — without it, two customers checking out the same product
-    at nearly the same time could both pass the stock check and oversell it.
-    This lock is why the whole loop must stay inside one transaction.
-    """
     shipping_address = validated_data['shipping_address']
 
     cart = Carts.query.filter_by(user_id=user_id).first()
@@ -67,7 +58,7 @@ def checkout(user_id, validated_data):
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
-def get_my_orders(user_id, status_filter=None, product_search=None, sort='desc'):
+def get_my_orders(user_id, status_filter=None, product_search=None, sort='desc', page=1, limit=10):
     query = Orders.query.filter_by(user_id=user_id)
 
     if status_filter:
@@ -82,7 +73,9 @@ def get_my_orders(user_id, status_filter=None, product_search=None, sort='desc')
             )
     
     order_column = Orders.created_at.asc() if sort == 'asc' else Orders.created_at.desc()
-    return query.order_by(order_column).all()
+    query = query.order_by(order_column)
+    
+    return query.paginate(page=page, per_page=limit, error_out=False)
 
 
 def get_order_details(order_id, requester_id, requester_role):
