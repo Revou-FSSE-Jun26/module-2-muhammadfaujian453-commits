@@ -10,7 +10,7 @@ from flask_jwt_extended import JWTManager
 from app.middleware.errors import register_error_handlers
 from flasgger import Swagger
 from app.config import Config
-from app.utils import db
+from app.utils import db, limiter
 from app.models import Users, Sellers, Categories, Products, Carts, cart_items, Orders, OrderItems
 from app.controllers import auth_bp, users_bp, category_bp, seller_bp, product_bp, cart_bp, order_bp
 
@@ -45,7 +45,7 @@ def setup_logging(app):
 def create_app(test_config=None):
     app = Flask(__name__)
 
-    # Load configuration from config.py
+    # Load configuration
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
@@ -53,15 +53,17 @@ def create_app(test_config=None):
     origins = app.config.get('CORS_ORIGINS', '*')
     CORS(app, origins=origins.split(',') if origins != '*' else '*')
 
-    # Initializing logging with application
+    # Initializing logging 
     setup_logging(app)
     logging.info("Initializing the Flask application...")
 
-    # Initializing db with application
+    # Initializing db 
     db.init_app(app)
-    # Initializing Flask-Migrate with application
+    # Initializing Rate Limiter
+    limiter.init_app(app)
+    # Initializing Flask-Migrate 
     Migrate(app, db)
-    # Initializing JWT with application
+    # Initializing JWT
     JWTManager(app)
     
     swagger_template = {
