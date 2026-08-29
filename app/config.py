@@ -6,10 +6,15 @@ from datetime import timedelta
 load_dotenv()
 
 class Config:
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+    _raw_database_url = os.getenv('DATABASE_URL')
 
-    if not SQLALCHEMY_DATABASE_URI:
+    if not _raw_database_url:
         raise ValueError("DATABASE_URL is not configure in .env file!")
+
+    if _raw_database_url.startswith("postgres://"):
+        _raw_database_url = _raw_database_url.replace("postgres://", "postgresql://", 1)
+
+    SQLALCHEMY_DATABASE_URI = _raw_database_url
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

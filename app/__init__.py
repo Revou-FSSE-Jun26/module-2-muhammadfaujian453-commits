@@ -26,7 +26,7 @@ def setup_logging(app):
         root_logger.handlers.clear()
     root_logger.addHandler(console_handler)
 
-    if os.getenv('RENDER') is None:
+    if os.getenv('IS_PRODUCTION', 'false').lower() is None:
         if not os.path.exists('logs'):
             os.mkdir('logs')
         file_handler = TimedRotatingFileHandler('logs/app.log', when='midnight', interval=1, backupCount=7)
