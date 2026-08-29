@@ -15,31 +15,23 @@ from app.models import Users, Sellers, Categories, Products, Carts, cart_items, 
 from app.controllers import auth_bp, users_bp, category_bp, seller_bp, product_bp, cart_bp, order_bp
 
 def setup_logging(app):
-    """
-    Configure Python's logging system.
-    Logs go to TWO places: Console and a rotating file (logs/app.log).
-    """
-    if not os.path.exists('logs'):
-        os.mkdir('logs')
-
     formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
 
-    file_handler = TimedRotatingFileHandler(
-        'logs/app.log', when='midnight', interval=1, backupCount=7
-    )
-    file_handler.setFormatter(formatter)
-
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
-    
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
-
     root_logger.addHandler(console_handler)
-    root_logger.addHandler(file_handler)
+
+    if os.getenv('RENDER') is None:
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+        file_handler = TimedRotatingFileHandler('logs/app.log', when='midnight', interval=1, backupCount=7)
+        file_handler.setFormatter(formatter)
+        root_logger.addHandler(file_handler)
 
 
 def create_app(test_config=None):
