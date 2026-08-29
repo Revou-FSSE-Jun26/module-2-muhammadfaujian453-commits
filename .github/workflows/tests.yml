@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -r requirements-dev.txt
-      - run: pytest -v
+      - run: pytest --cov=app --cov-report=term-missing
         env:
           DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
           JWT_SECRET_KEY: ci-test-secret-key
