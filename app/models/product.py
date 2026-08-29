@@ -8,8 +8,8 @@ class Products(db.Model):
 
     # Generate Column and it's Criteria
     id = db.Column(db.Integer, primary_key = True)
-    category_id = db.Column(db.Integer, db.ForeignKey('categories.id', ondelete='RESTRICT'), nullable = False)
-    seller_id = db.Column(db.Integer, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id', ondelete='RESTRICT'), nullable = False, index = True)
+    seller_id = db.Column(db.Integer, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False, index = True)
     name = db.Column(db.String(255),nullable = False)
     slug = db.Column(db.String(255), unique=True, nullable=False)
     description = db.Column(db.Text)

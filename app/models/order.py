@@ -13,12 +13,13 @@ class Orders(db.Model):
     status = db.Column(
         db.Enum('pending', 'processing', 'shipped','delivered' ,'cancelled', name='order_logistics_status'),
         nullable = False,
-        server_default = "pending"
+        server_default = "pending",
+        index = True
     )
     total_amount = db.Column(db.Numeric(12, 2), nullable = False)
     shipping_address = db.Column(db.Text, nullable=  False)
 
-    created_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now())
+    created_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), index = True)
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
     # Relationship between Table
