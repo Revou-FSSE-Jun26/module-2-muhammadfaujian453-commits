@@ -1,5 +1,6 @@
 """Order service — business logic for checkout (split-by-seller, stock
 deduction) and order lifecycle management."""
+import logging
 from sqlalchemy import delete
 from sqlalchemy.exc import SQLAlchemyError
 from app.models import Orders, OrderItems, Carts, cart_items, Products
@@ -62,15 +63,26 @@ def checkout(user_id, validated_data):
         return created_orders, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
-def get_my_orders(user_id, status_filter=None):
+def get_my_orders(user_id, status_filter=None, product_search=None, sort='desc'):
     query = Orders.query.filter_by(user_id=user_id)
+
     if status_filter:
         query = query.filter_by(status=status_filter)
-    return query.order_by(Orders.created_at.desc()).all()
+
+    if product_search:
+            query = (
+                query.join(OrderItems, OrderItems.order_id == Orders.id)
+                .join(Products, Products.id == OrderItems.product_id)
+                .filter(Products.name.ilike(f"%{product_search}%"))
+                .distinct()
+            )
+    
+    order_column = Orders.created_at.asc() if sort == 'asc' else Orders.created_at.desc()
+    return query.order_by(order_column).all()
 
 
 def get_order_details(order_id, requester_id, requester_role):
@@ -110,7 +122,7 @@ def update_order_status(order_id, requester_id, requester_role, validated_data):
         return order, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 def delete_order(order_id, requester_id, requester_role):
@@ -130,5 +142,5 @@ def delete_order(order_id, requester_id, requester_role):
         return True, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}

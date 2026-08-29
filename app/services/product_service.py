@@ -1,6 +1,5 @@
-"""Product service — business logic for products, including the delete
-guard required by Checkpoint 3 (blocks deletion of products tied to
-active orders)."""
+"""Product service — business logic for products"""
+import logging
 import re
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
@@ -34,7 +33,7 @@ def create_product(seller_id, validated_data):
         return product, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
@@ -81,7 +80,7 @@ def update_product(product_id, seller_id, validated_data):
         return product, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
@@ -115,5 +114,5 @@ def delete_product(product_id, seller_id):
         return product, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}

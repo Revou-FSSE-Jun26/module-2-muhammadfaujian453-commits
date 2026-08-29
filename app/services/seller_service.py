@@ -1,4 +1,5 @@
 """Seller service — business logic for store profiles."""
+import logging
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.models import Sellers, Products
 from app.utils import db
@@ -26,7 +27,7 @@ def create_store(user_id, validated_data):
         return None, {"message": f"Store name '{validated_data['store_name']}' is already taken!", "status_code": 409}
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
@@ -59,7 +60,7 @@ def update_store(user_id, validated_data):
         return store, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
@@ -73,5 +74,5 @@ def close_store(user_id):
         return store, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}

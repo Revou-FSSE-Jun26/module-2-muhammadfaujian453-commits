@@ -1,4 +1,5 @@
 """Category service — business logic for product categories."""
+import logging
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.models import Categories
 from app.utils import db
@@ -15,7 +16,7 @@ def create_category(validated_data):
         return None, {"message": f"Category name '{validated_data['name']}' already exists on the system!", "status_code": 409}
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
@@ -42,7 +43,7 @@ def update_category(category_id, validated_data):
         return category, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
@@ -61,5 +62,5 @@ def delete_category(category_id):
         return None, {"message": "Cannot delete this category because there are products currently assigned to it.", "status_code": 409}
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}

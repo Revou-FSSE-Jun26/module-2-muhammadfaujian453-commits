@@ -1,4 +1,5 @@
 """User service — business logic for registration, profile lookup, and account deactivation."""
+import logging
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.models import Users
 from app.utils import db
@@ -27,7 +28,7 @@ def register_user(validated_data):
         return None, {"message": "Email already registered on the system!", "status_code": 409}
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 

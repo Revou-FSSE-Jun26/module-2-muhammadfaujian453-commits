@@ -34,4 +34,5 @@ instance/
 *.db
 
 # --- Logs ---
+logs/
 *.log

@@ -1,4 +1,5 @@
 """Cart service — business logic for the shopping cart, including quantity merging."""
+import logging
 from sqlalchemy import insert, update, delete
 from sqlalchemy.exc import SQLAlchemyError
 from app.models import Carts, Products, cart_items
@@ -48,7 +49,7 @@ def add_item(user_id, validated_data):
         return cart, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
@@ -102,7 +103,7 @@ def update_item(user_id, product_id, validated_data):
         return {"removed": False}, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
@@ -117,7 +118,7 @@ def delete_item(user_id, product_id):
         return True, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
@@ -129,5 +130,5 @@ def clear_cart(user_id):
         return True, None
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
+        logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}

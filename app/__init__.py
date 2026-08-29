@@ -1,3 +1,7 @@
+import os
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from sqlalchemy.exc import SQLAlchemyError
@@ -10,21 +14,54 @@ from app.utils import db
 from app.models import Users, Sellers, Categories, Products, Carts, cart_items, Orders, OrderItems
 from app.controllers import auth_bp, users_bp, category_bp, seller_bp, product_bp, cart_bp, order_bp
 
+def setup_logging(app):
+    """
+    Configure Python's logging system.
+    Logs go to TWO places: Console and a rotating file (logs/app.log).
+    """
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+
+    file_handler = TimedRotatingFileHandler(
+        'logs/app.log', when='midnight', interval=1, backupCount=7
+    )
+    file_handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    if root_logger.hasHandlers():
+        root_logger.handlers.clear()
+
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
+
+
 def create_app(test_config=None):
-    print("Initializing the Flask application...")
     app = Flask(__name__)
-    CORS(app)
 
     # Load configuration from config.py
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
 
+    origins = app.config.get('CORS_ORIGINS', '*')
+    CORS(app, origins=origins.split(',') if origins != '*' else '*')
+
+    # Initializing logging with application
+    setup_logging(app)
+    logging.info("Initializing the Flask application...")
+
     # Initializing db with application
     db.init_app(app)
-    # Setup Flask-Migrate
+    # Initializing Flask-Migrate with application
     Migrate(app, db)
-    # Initializing JWT
+    # Initializing JWT with application
     JWTManager(app)
     
     swagger_template = {
@@ -55,15 +92,15 @@ def create_app(test_config=None):
         try:
             status = "Database Connection Successfull!"
             db.session.execute(db.text('SELECT 1'))
-            print("Database Connection Successfull!")
+            logging.info("Database Connection Successfull!")
 
         except SQLAlchemyError as e:
             status = "Database Connection Failed!"
-            print(f"Database Connection Failed: {e}")
+            logging.error(f"Database Connection Failed: {e}")
 
         except Exception as e:
             status = "Connection Failed!"
-            print(f"General Error: {e}")
+            logging.error(f"General Error: {e}")
             
         finally:
             db.session.close()

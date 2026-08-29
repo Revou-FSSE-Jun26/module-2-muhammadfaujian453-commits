@@ -78,9 +78,21 @@ def get_my_orders():
         name: status
         type: string
         enum: [pending, processing, shipped, delivered, cancelled]
+      - in: query
+        name: product
+        type: string
+        description: Search orders containing a product whose name matches this keyword
+      - in: query
+        name: sort
+        type: string
+        enum: [asc, desc]
+        default: desc
+        description: Sort orders by creation date
     responses:
       200:
         description: List of user's orders
+      400:
+        description: Invalid 'sort' value
       401:
         description: Unauthorized (Invalid or missing token)
       500:
@@ -88,8 +100,13 @@ def get_my_orders():
     """
     user_id = int(get_jwt_identity())
     status_filter = request.args.get('status', type=str)
+    product_search = request.args.get('product', type=str)
+    sort = request.args.get('sort', 'desc', type=str).lower()
 
-    orders = order_service.get_my_orders(user_id, status_filter)
+    if sort not in ('asc', 'desc'):
+        return jsonify({"error": "Invalid 'sort' value. Must be 'asc' or 'desc'."}), 400
+
+    orders = order_service.get_my_orders(user_id, status_filter, product_search, sort)
         
     return jsonify({
         "message": "Orders retrieved successfully",
