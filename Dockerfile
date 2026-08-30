@@ -11,6 +11,10 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
+RUN useradd --create-home --shell /bin/bash appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8000
 
 CMD ["sh", "-c", "exec gunicorn run:app --bind 0.0.0.0:$PORT --workers 2"]
