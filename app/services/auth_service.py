@@ -6,13 +6,6 @@ from app.utils import db
 
 
 def authenticate_user(email, password):
-    """
-    Verify credentials, issue a JWT, and reactivate a soft-deleted account on successful login.
-    
-    Returns:
-        (result_dict, None) on success — result_dict has 'message', 'token', 'user'
-        (None, error_dict) on failure
-    """
     user = Users.query.filter_by(email=email).first()
 
     if user is None or not check_password(password, user.password_hash):

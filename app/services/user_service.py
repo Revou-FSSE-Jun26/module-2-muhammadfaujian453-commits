@@ -6,13 +6,6 @@ from app.utils import db
 
 
 def register_user(validated_data):
-    """
-    Args:
-        validated_data: dict matching UserRegisterSchema (email, password, full_name, avatar_url)
-    Returns:
-        (user, None) on success
-        (None, error_dict) on failure
-    """
     try:
         user = Users(
             email=validated_data['email'],

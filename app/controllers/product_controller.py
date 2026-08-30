@@ -17,7 +17,6 @@ list_response_schema = ProductResponseSchema(many=True)
 # PRODUCT MODULE (BLUEPRINT: product_bp | PREFIX: /products)
 # =========================================================================
 
-# A. Create New Product Route (Protected: Seller Only with Input Validation)
 @product_bp.route('', methods=['POST'])
 @jwt_required()
 @seller_required()
@@ -78,7 +77,7 @@ def create_product():
         "product": response_schema.dump(product)
     }), 201
     
-# B. Get all product list route
+
 @product_bp.route('', methods=['GET'])
 def get_products():
     """Retrieve all active products with pagination and filters
@@ -138,7 +137,7 @@ def get_products():
         }
     }), 200       
 
-# C. Get specific product by its ID route
+
 @product_bp.route('/<int:product_id>', methods=['GET'])
 def get_product_by_id(product_id):
     """Get a specific product by ID
@@ -167,7 +166,7 @@ def get_product_by_id(product_id):
         "product": response_schema.dump(product)
     }), 200        
 
-# D. Update product route
+
 @product_bp.route('/<int:product_id>', methods=['PUT'])
 @jwt_required()
 @seller_required()
@@ -228,7 +227,7 @@ def update_product(product_id):
         "product": response_schema.dump(product)
     }), 200
 
-# E. Delete product route
+
 @product_bp.route('/<int:product_id>', methods=['DELETE'])
 @jwt_required()
 @seller_required()

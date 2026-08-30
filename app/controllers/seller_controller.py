@@ -16,7 +16,6 @@ response_schema = SellerResponseSchema()
 # SELLER MODULE (BLUEPRINT: seller_bp | PREFIX: /sellers)
 # =========================================================================
 
-# A. Register/Create Store Profile Route
 @seller_bp.route('', methods=['POST'])
 @jwt_required()
 def create_store():
@@ -69,7 +68,7 @@ def create_store():
         "store": response_schema.dump(store)
     }), 201        
 
-# B. Get store by seller ID route
+
 @seller_bp.route('/<int:seller_id>', methods=['GET'])
 def get_store_profile(seller_id):
     """View public store profile
@@ -99,7 +98,7 @@ def get_store_profile(seller_id):
         "store": response_schema.dump(store)
     }), 200        
 
-# C. Update store route
+
 @seller_bp.route('', methods=['PUT'])
 @jwt_required()
 @seller_required()
@@ -153,7 +152,7 @@ def update_store():
         "store": response_schema.dump(store)
     }), 200
 
-# D. Delete/close store route
+
 @seller_bp.route('', methods=['DELETE'])
 @jwt_required()
 @seller_required()
@@ -181,4 +180,3 @@ def close_store():
         return jsonify({"error": error["message"]}), error["status_code"]
         
     return jsonify({"message": "Your store and all associated products have been deactivated."}), 200
-       

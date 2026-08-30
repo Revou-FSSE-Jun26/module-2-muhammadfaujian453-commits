@@ -1,4 +1,4 @@
-"""Cart service — business logic for the shopping cart, including quantity merging."""
+"""Cart service — business logic for the shopping cart."""
 import logging
 from sqlalchemy import insert, update, delete
 from sqlalchemy.exc import SQLAlchemyError

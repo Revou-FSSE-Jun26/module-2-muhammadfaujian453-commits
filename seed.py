@@ -12,7 +12,7 @@ def run_seeder():
         print("=== STARTING UNIFIED DATABASE SEEDING PROCESS ===")
 
         try:
-            # 1. SEED CATEGORIES (Business & Locust)
+            # SEED CATEGORIES
             cat_data = [
                 {"name": "Electrical & Panels", "desc": "Electrical components, cables, and panel boxes."},
                 {"name": "Food & Beverages", "desc": "Snacks, chocolates, and light culinary items."},
@@ -28,7 +28,7 @@ def run_seeder():
                 cats[cd["name"]] = cat
             print("[1/6] Categories successfully mapped.")
 
-            # 2. SEED USERS (Business & Locust)
+            # SEED USERS
             users_data = [
                 {"email": "admin@revoshop.com", "name": "System Admin", "role": "admin"},
                 {"email": "faujian@angkasa.com", "name": "Muhammad Faujian", "role": "user"},
@@ -50,7 +50,7 @@ def run_seeder():
                 user_objs[ud["email"]] = u
             print("[2/6] User accounts successfully created.")
 
-            # 3. SEED SELLERS
+            # SEED SELLERS
             sellers_config = [
                 (user_objs["faujian@angkasa.com"].id, "PT Angkasa Panelindo Elektrik", "Specialist in panel assembly and electrical component distribution.", "https://dummyimage.com/200x200/000/fff&text=Angkasa+Panel"),
                 (user_objs["mesya@mianis.com"].id, "Mianis Cubes", "Production of premium homemade chocolate snacks.", "https://dummyimage.com/200x200/000/fff&text=Mianis+Cubes"),
@@ -67,17 +67,14 @@ def run_seeder():
                 seller_objs[name] = seller
             print("[3/6] Store profiles successfully configured.")
 
-            # 4. SEED PRODUCTS
+            # SEED PRODUCTS
             products_data = [
-                # Angkasa Panel Products
                 {"seller": "PT Angkasa Panelindo Elektrik", "cat": "Electrical & Panels", "name": "MCB 10 Ampere Schneider", "price": 55000.00, "stock": 100, "img": "https://dummyimage.com/400x400/ccc/000&text=MCB+10A"},
                 {"seller": "PT Angkasa Panelindo Elektrik", "cat": "Electrical & Panels", "name": "Supreme NYM Cable 3x2.5mm", "price": 450000.00, "stock": 50, "img": "https://dummyimage.com/400x400/ccc/000&text=NYM+Cable"},
                 {"seller": "PT Angkasa Panelindo Elektrik", "cat": "Electrical & Panels", "name": "Topindo Panel Box 30x40x15", "price": 150000.00, "stock": 25, "img": "https://dummyimage.com/400x400/ccc/000&text=Panel+Box"},
-                # Mianis Cubes Products
                 {"seller": "Mianis Cubes", "cat": "Food & Beverages", "name": "Mianis Chocolate Cubes Original", "price": 35000.00, "stock": 200, "img": "https://dummyimage.com/400x400/5c3a21/fff&text=Choco+Cubes"},
                 {"seller": "Mianis Cubes", "cat": "Food & Beverages", "name": "Mianis Matcha Bites", "price": 38000.00, "stock": 150, "img": "https://dummyimage.com/400x400/2d5a27/fff&text=Matcha+Bites"},
                 {"seller": "Mianis Cubes", "cat": "Food & Beverages", "name": "Mianis Dark Choco Premium", "price": 42000.00, "stock": 100, "img": "https://dummyimage.com/400x400/1a110b/fff&text=Dark+Choco"},
-                # Locust Load Test Product (Massive Stock)
                 {"seller": "Locust Mega Store", "cat": "Load Test Category", "name": "Titanium Widget", "price": 5000.00, "stock": 999999, "img": "https://dummyimage.com/400x400/f00/fff&text=Locust+Widget"}
             ]
 
@@ -89,7 +86,7 @@ def run_seeder():
                         category_id=cats[pd["cat"]].id,
                         seller_id=seller_objs[pd["seller"]].id,
                         name=pd["name"],
-                        slug=generate_unique_slug(pd["name"]), # Uses Service Layer logic
+                        slug=generate_unique_slug(pd["name"]),
                         price=pd["price"],
                         stock=pd["stock"],
                         image_url=pd["img"]
@@ -99,7 +96,7 @@ def run_seeder():
                 prod_objs[pd["name"]] = p
             print("[4/6] Product lines and Locust test items successfully inserted.")
 
-            # 5. SEED ORDERS & ORDER ITEMS
+            # SEED ORDERS & ORDER ITEMS
             existing_orders = Orders.query.first()
             if not existing_orders:
                 orders_to_create = [
@@ -120,7 +117,7 @@ def run_seeder():
             else:
                 print("[5/6] Orders already exist, skipping.")
 
-            # 6. SEED ACTIVE CARTS
+            # SEED ACTIVE CARTS
             cart_eko = Carts.query.filter_by(user_id=user_objs["eko@gmail.com"].id).first()
             if not cart_eko:
                 cart_eko = Carts(user_id=user_objs["eko@gmail.com"].id)

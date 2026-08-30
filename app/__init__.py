@@ -45,17 +45,12 @@ def create_app(test_config=None):
     origins = app.config.get('CORS_ORIGINS', '*')
     CORS(app, origins=origins.split(',') if origins != '*' else '*')
 
-    # Initializing logging 
+    # Register Flask extensions
     setup_logging(app)
     logging.info("Initializing the Flask application...")
-
-    # Initializing db 
     db.init_app(app)
-    # Initializing Rate Limiter
     limiter.init_app(app)
-    # Initializing Flask-Migrate 
     Migrate(app, db)
-    # Initializing JWT
     JWTManager(app)
     
     swagger_template = {
@@ -69,7 +64,6 @@ def create_app(test_config=None):
         }
     }
 
-    # Initializing Swagger
     Swagger(app, template=swagger_template)
 
     app.register_blueprint(auth_bp)
@@ -101,7 +95,6 @@ def create_app(test_config=None):
 
         return jsonify({"status": status})
 
-    # Initializing Error Handlers
     register_error_handlers(app)
 
     return app

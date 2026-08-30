@@ -16,7 +16,6 @@ list_response_schema = OrderResponseSchema(many=True)
 # ORDER MODULE (BLUEPRINT: order_bp | PREFIX: /orders)
 # =========================================================================
 
-# A. Place a New Order Route
 @order_bp.route('/checkout', methods=['POST'])
 @jwt_required()
 def checkout():
@@ -63,7 +62,7 @@ def checkout():
         "orders": list_response_schema.dump(orders)
     }), 201
 
-# B. Retrieve all order that placed by current user
+
 @order_bp.route('', methods=['GET'])
 @jwt_required()
 def get_my_orders():
@@ -131,7 +130,7 @@ def get_my_orders():
         }
     }), 200
     
-# C. Get specific order details and its item
+
 @order_bp.route('/<int:order_id>', methods=['GET'])
 @jwt_required()
 def get_order_details(order_id):
@@ -170,7 +169,7 @@ def get_order_details(order_id):
         "order": response_schema.dump(order)
     }), 200 
 
-# D. Update order status route
+
 @order_bp.route('/<int:order_id>/status', methods=['PUT'])
 @jwt_required()
 def update_order_status(order_id):
@@ -225,7 +224,7 @@ def update_order_status(order_id):
         "order": response_schema.dump(order)
     }), 200
 
-# E. Delete order route
+
 @order_bp.route('/<int:order_id>', methods=['DELETE'])
 @jwt_required()
 def delete_order(order_id):

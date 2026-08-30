@@ -3,7 +3,6 @@ from marshmallow.exceptions import ValidationError
 
 def register_error_handlers(app):
     
-    # 1. Catch Marshmallow Validation Errors
     @app.errorhandler(ValidationError)
     def handle_marshmallow_validation(error):
         flat_errors = {field: messages[0] for field, messages in error.messages.items()}
@@ -12,7 +11,6 @@ def register_error_handlers(app):
             "details": flat_errors
         }), 400
 
-    # 2. Standard HTTP Errors
     @app.errorhandler(400)
     def bad_request(error):
         return jsonify({"error": "Bad Request", "message": str(error.description)}), 400

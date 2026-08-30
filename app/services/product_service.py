@@ -85,11 +85,6 @@ def update_product(product_id, seller_id, validated_data):
 
 
 def delete_product(product_id, seller_id):
-    """
-    Soft-delete a product — BLOCKED if it is tied to an order still
-    'pending', 'processing', or 'shipped'. This is Checkpoint 3
-    requirement #2.
-    """
     product = Products.query.filter_by(id=product_id, is_active=True).first()
     if not product:
         return None, {"message": "Product not found or already deactivated!", "status_code": 404}

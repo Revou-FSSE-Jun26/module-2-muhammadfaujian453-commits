@@ -18,7 +18,6 @@ list_response_schema = CategoryResponseSchema(many=True)
 # CATEGORY MODULE (BLUEPRINT: category_bp | PREFIX: /categories)
 # =========================================================================
 
-# A. Create New Category Route (Protected: Admin Only)
 @category_bp.route('', methods=['POST'])
 @jwt_required()
 @roles_required('admin')
@@ -70,7 +69,7 @@ def create_category():
         "category": response_schema.dump(category)
     }), 201
 
-# B. Retrieve all categories route
+
 @category_bp.route('', methods=['GET'])
 def get_categories():
     """Retrieve all categories
@@ -118,7 +117,7 @@ def get_category_by_id(category_id):
         "category": response_schema.dump(category)
     }), 200
 
-# C. Update category routes
+
 @category_bp.route('/<int:category_id>', methods=['PUT'])
 @jwt_required()
 @roles_required('admin')
@@ -172,7 +171,7 @@ def update_category(category_id):
         "category": response_schema.dump(category)
     }), 200
 
-# D. Delete category route
+
 @category_bp.route('/<int:category_id>', methods=['DELETE'])
 @jwt_required()
 @roles_required('admin')

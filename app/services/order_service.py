@@ -1,5 +1,4 @@
-"""Order service — business logic for checkout (split-by-seller, stock
-deduction) and order lifecycle management."""
+"""Order service — business logic for checkout and order lifecycle management."""
 import logging
 from sqlalchemy import delete
 from sqlalchemy.exc import SQLAlchemyError
@@ -34,11 +33,11 @@ def checkout(user_id, validated_data):
         for seller_id, group_items in seller_groups.items():
             order = Orders(user_id=user_id, seller_id=seller_id, shipping_address=shipping_address, total_amount=0)
             db.session.add(order)
-            db.session.flush()  # need order.id before creating its OrderItems rows
+            db.session.flush()
 
             order_total = 0
             for item, product in group_items:
-                product.stock -= item.quantity  # stock deduction
+                product.stock -= item.quantity
                 subtotal = float(product.price) * item.quantity
                 order_total += subtotal
                 db.session.add(OrderItems(
@@ -108,7 +107,7 @@ def update_order_status(order_id, requester_id, requester_role, validated_data):
             for item in order.order_items:
                 product = db.session.get(Products, item.product_id)
                 if product:
-                    product.stock += item.quantity  # restock on cancellation
+                    product.stock += item.quantity
 
         order.status = new_status
         db.session.commit()

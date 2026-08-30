@@ -15,7 +15,6 @@ response_schema = CartResponseSchema()
 # CART MODULE (BLUEPRINT: cart_bp | PREFIX: /carts)
 # =========================================================================
 
-# A. Add order item to cart route
 @cart_bp.route('/items', methods=['POST'])
 @jwt_required()
 def add_to_cart():
@@ -62,8 +61,8 @@ def add_to_cart():
         return jsonify({"error": error["message"]}), error["status_code"]
 
     return jsonify({"message": "Item successfully added to cart!"}), 200
-    
-# B. Retrieve or vew cart route
+
+
 @cart_bp.route('', methods=['GET'])
 @jwt_required()
 def view_cart():
@@ -89,7 +88,7 @@ def view_cart():
         **response_schema.dump(cart_data)
     }), 200
 
-# C. Update cart route
+
 @cart_bp.route('/items/<int:product_id>', methods=['PUT'])
 @jwt_required()
 def update_cart_item(product_id):
@@ -137,7 +136,7 @@ def update_cart_item(product_id):
     message = "Item removed from cart!" if result.get("removed") else "Cart item updated successfully!"
     return jsonify({"message": message}), 200
 
-# D. Delete item from the cart
+
 @cart_bp.route('/items/<int:product_id>', methods=['DELETE'])
 @jwt_required()
 def delete_cart_item(product_id):
@@ -171,7 +170,7 @@ def delete_cart_item(product_id):
 
     return jsonify({"message": "Item successfully removed from cart!"}), 200
 
-# E. Delete/clear all item and its cart
+
 @cart_bp.route('', methods=['DELETE'])
 @jwt_required()
 def clear_cart():

@@ -15,10 +15,9 @@ user_response_schema = UserResponseSchema()
 
 
 # =========================================================================
-# 1. USER MODULE (BLUEPRINT: users_bp | PREFIX: /users)
+# USER MODULE (BLUEPRINT: users_bp | PREFIX: /users)
 # =========================================================================
 
-# A. New User Registration Route
 @users_bp.route('', methods = ['POST'])
 @limiter.limit("10 per hour")
 def register_user():
@@ -72,7 +71,6 @@ def register_user():
     }), 201
 
 
-# B. Retrieve Specific User Route
 @users_bp.route('/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_user_by_id(user_id):
@@ -101,7 +99,6 @@ def get_user_by_id(user_id):
         description: Internal server error
     """
     
-    # Identity extraction from JWT Token
     requester_id = int(get_jwt_identity())
     requester_role= get_jwt().get('role')
 
@@ -114,7 +111,7 @@ def get_user_by_id(user_id):
         "user": user_response_schema.dump(user)
     }), 200
 
-# C. Delete User Account Route
+
 @users_bp.route('/<int:user_id>', methods=['DELETE'])
 @jwt_required()
 def delete_user(user_id):
@@ -143,7 +140,6 @@ def delete_user(user_id):
         description: Internal server error
     """
 
-    # Identity extraction from JWT Token
     requester_id = int(get_jwt_identity())
     requester_role = get_jwt().get('role')
 
@@ -155,7 +151,7 @@ def delete_user(user_id):
         "message": f"User with ID {user_id} and its associated data successfully deactivated"
         }), 200
 
-# D. Retrieve Current Authenticated User Route
+
 @users_bp.route('/me', methods=['GET'])
 @jwt_required()
 def get_current_user():
@@ -187,7 +183,7 @@ def get_current_user():
     }), 200
 
 # =========================================================================
-# 2. AUTH MODULE (BLUEPRINT: auth_bp | PREFIX: /auth)
+# AUTH MODULE (BLUEPRINT: auth_bp | PREFIX: /auth)
 # =========================================================================
 
 @auth_bp.route('/login', methods=['POST'])
