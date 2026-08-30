@@ -36,3 +36,9 @@ instance/
 # --- Logs ---
 logs/
 *.log
+logs/**/*
+
+# --- Python Extra Caches ---
+.mypy_cache/
+.dmypy.json
+dmypy.json
