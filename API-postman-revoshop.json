@@ -308,7 +308,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc4NzMzMDg0NywianRpIjoiNmIyZDM5ZDUtOTJjNC00N2U5LWI0YTQtZmE1NWMwZTA4MjBkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjUiLCJuYmYiOjE3ODczMzA4NDcsImNzcmYiOiJiNzg2ZjcwMi0wOTNlLTQyOTctOTQxZS0wMzZkMjMyYjNjNmMiLCJleHAiOjE3ODczMzQ0NDcsInJvbGUiOiJ1c2VyIn0.6CrRxES3G9e0EMm_2E6AiiUvLtT20QAKmtfL1brjmso",
+                  "value": "{{buyer_token}}",
                   "type": "string"
                 }
               ]
@@ -382,6 +382,108 @@
               ],
               "cookie": [],
               "body": "{\n    \"message\": \"Current user data successfully retrieved!\",\n    \"user\": {\n        \"avatar_url\": null,\n        \"created_at\": null,\n        \"email\": \"eko@gmail.com\",\n        \"full_name\": \"Eko Rusdiyanto\",\n        \"id\": 5,\n        \"is_active\": true,\n        \"role\": \"user\",\n        \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "5. Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const responseData = pm.response.json();",
+                  "",
+                  "pm.environment.set(\"admin_token\", responseData.token);",
+                  "",
+                  "console.log(\"Admin token has been successfully updated automatically!\");"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@revoshop.com\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"admin@revoshop.com\",\n    \"password\": \"password123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sun, 30 Aug 2026 10:13:44 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "575"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Login successful\",\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc4ODA4NDgyNCwianRpIjoiNDg2ODlkNTUtNzczNS00YjgwLTg0MDktNjBmNGY4NGI5YTcwIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjEiLCJuYmYiOjE3ODgwODQ4MjQsImNzcmYiOiJkMGI4N2M0OS03MWE5LTRhYjgtODMyMy1lZmFhMmE1ZjY0YmUiLCJleHAiOjE3ODgwODg0MjQsInJvbGUiOiJhZG1pbiJ9.WpL23Sr-e7w-FB3lSlg-lEPZ4PwnL_7M1mfro6_-93o\",\n    \"user\": {\n        \"avatar_url\": null,\n        \"created_at\": null,\n        \"email\": \"admin@revoshop.com\",\n        \"full_name\": \"System Admin\",\n        \"id\": 1,\n        \"is_active\": true,\n        \"role\": \"admin\",\n        \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\"\n    }\n}"
             }
           ]
         }
@@ -2096,6 +2198,516 @@
               ],
               "cookie": [],
               "body": "{\n    \"msg\": \"Missing Authorization Header\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Category Management",
+      "item": [
+        {
+          "name": "1. Get All Categories",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@revoshop.com\",\n    \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"admin@revoshop.com\",\n    \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "categories"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sun, 30 Aug 2026 10:15:23 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "565"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"categories\": [\n        {\n            \"created_at\": null,\n            \"description\": \"Electrical components, cables, and panel boxes.\",\n            \"id\": 1,\n            \"name\": \"Electrical & Panels\",\n            \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\"\n        },\n        {\n            \"created_at\": null,\n            \"description\": \"Snacks, chocolates, and light culinary items.\",\n            \"id\": 2,\n            \"name\": \"Food & Beverages\",\n            \"updated_at\": \"2026-08-21T14:47:01.460136+07:00\"\n        },\n        {\n            \"created_at\": null,\n            \"description\": \"Dedicated category for Locust performance testing.\",\n            \"id\": 3,\n            \"name\": \"Load Test Category\",\n            \"updated_at\": \"2026-08-29T00:42:42.808824+07:00\"\n        }\n    ],\n    \"message\": \"Categories successfully retrieved!\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Add Categories (Admin only)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Footwear\",\n    \"description\": \"Footwear for sports, casual, and formal wear.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Footwear\",\n    \"description\": \"Footwear for sports, casual, and formal wear.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "categories"
+                  ]
+                }
+              },
+              "status": "CREATED",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sun, 30 Aug 2026 10:24:45 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "211"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"category\": {\n        \"created_at\": null,\n        \"description\": \"Footwear for sports, casual, and formal wear.\",\n        \"id\": 4,\n        \"name\": \"Footwear\",\n        \"updated_at\": \"2026-08-30T17:24:45.279230+07:00\"\n    },\n    \"message\": \"Category successfully created!\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. Get Category by its ID",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/categories/4",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories",
+                "4"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{base_url}}/categories/4",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "categories",
+                    "4"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sun, 30 Aug 2026 11:08:55 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "212"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"category\": {\n        \"created_at\": null,\n        \"description\": \"Footwear for sports, casual, and formal wear.\",\n        \"id\": 4,\n        \"name\": \"Footwear\",\n        \"updated_at\": \"2026-08-30T17:24:45.279230+07:00\"\n    },\n    \"message\": \"Category retrieved successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "4. Update Category",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Footwear\",\n    \"description\": \"Male and Female footwear for sports, casual, and formal wear.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/categories/4",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories",
+                "4"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Footwear\",\n    \"description\": \"Male and Female footwear for sports, casual, and formal wear.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/categories/4",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "categories",
+                    "4"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sun, 30 Aug 2026 11:11:32 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "211"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"category\": {\n        \"created_at\": null,\n        \"description\": \"Footwear for sports, casual, and formal wear.\",\n        \"id\": 4,\n        \"name\": \"Footwear\",\n        \"updated_at\": \"2026-08-30T17:24:45.279230+07:00\"\n    },\n    \"message\": \"Category updated successfully!\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "5. Negative Add Category (Buyer/Seller)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Snack\",\n    \"description\": \"Snack\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (Forbidden)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Snack\",\n    \"description\": \"Snack\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "categories"
+                  ]
+                }
+              },
+              "status": "FORBIDDEN",
+              "code": 403,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sun, 30 Aug 2026 11:15:09 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "73"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"Forbidden\",\n    \"message\": \"Access denied. Required role(s): admin\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "6. Delete Category",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories/4",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories",
+                "4"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/categories/4",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "categories",
+                    "4"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sun, 30 Aug 2026 11:17:12 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "56"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Category 'Footwear' deleted successfully!\"\n}"
             }
           ]
         }

@@ -88,7 +88,36 @@ def get_categories():
         "message": "Categories successfully retrieved!",
         "categories": list_response_schema.dump(categories)
     }), 200
-    
+
+
+@category_bp.route('/<int:category_id>', methods=['GET'])
+def get_category_by_id(category_id):
+    """Get a specific category by ID
+    ---
+    tags:
+      - Categories
+    parameters:
+      - in: path
+        name: category_id
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Category details
+      404:
+        description: Category not found
+      500:
+        description: Internal server error
+    """
+    category, error = category_service.get_category_by_id(category_id)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
+
+    return jsonify({
+        "message": "Category retrieved successfully",
+        "category": response_schema.dump(category)
+    }), 200
+
 # C. Update category routes
 @category_bp.route('/<int:category_id>', methods=['PUT'])
 @jwt_required()

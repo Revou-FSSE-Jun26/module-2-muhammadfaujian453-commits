@@ -69,3 +69,20 @@ class TestCategoryAPI:
         assert response.status_code == 200
         assert "categories" in data
         assert isinstance(data["categories"], list)
+
+    def test_get_category_by_id(self, client, app):
+        """Scenario 6: Retrieve a single category by its ID (200), then a non-existent ID (404)"""
+        setup_test_user(app, "admin2@test.com", "admin")
+        res_login = client.post('/auth/login', json={"email": "admin2@test.com", "password": "password123"})
+        token = res_login.get_json()["token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        create_response = client.post('/categories', json={"name": "Furniture"}, headers=headers)
+        category_id = create_response.get_json()["category"]["id"]
+
+        response = client.get(f'/categories/{category_id}')
+        assert response.status_code == 200
+        assert response.get_json()["category"]["name"] == "Furniture"
+
+        response_404 = client.get('/categories/999999')
+        assert response_404.status_code == 404

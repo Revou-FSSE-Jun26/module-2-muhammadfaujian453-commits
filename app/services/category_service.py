@@ -24,6 +24,13 @@ def get_all_categories():
     return Categories.query.all()
 
 
+def get_category_by_id(category_id):
+    category = db.session.get(Categories, category_id)
+    if not category:
+        return None, {"message": "Category not found!", "status_code": 404}
+    return category, None
+
+
 def update_category(category_id, validated_data):
     category = db.session.get(Categories, category_id)
     if not category:

@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/mfaujian/e-commerce-multivendor-api/actions/workflows/tests.yml/badge.svg)](https://github.com/mfaujian/e-commerce-multivendor-api/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Live API](https://img.shields.io/badge/Live%20API-Railway-8A2BE2)](https://<your-app>.up.railway.app/apidocs)
+[![Live API](https://img.shields.io/badge/Live%20API-Railway-8A2BE2)](https://e-commerce-multivendor-api.up.railway.app/apidocs/)
 
 > 🔗 **Live API Documentation:** [https://e-commerce-multivendor-api.up.railway.app/apidocs/](https://e-commerce-multivendor-api.up.railway.app/apidocs/)
 
@@ -363,6 +363,7 @@ DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" python seed.py
    pip install -r requirements-dev.txt
 ```
    For a production-only install (no test or load-testing tools), use `pip install -r requirements.txt` instead.
+
 4. Configure your `.env` file (use `.env.example` as a starting point) with the required environment variables:
 ```env
    DATABASE_URL=postgresql://user:password@localhost:5432/your_db
@@ -421,6 +422,10 @@ Below is the testing matrix covering all core functionalities.
 | Method | Endpoint | Description | Testing Criteria | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/categories` | Create category | Protected by `@roles_required('admin')`. | ✅ |
+| `GET` | `/categories` | List all categories | Returns the full category list, no auth required. | ✅ |
+| `GET` | `/categories/{id}` | Get a category by ID | Returns `404` for a non-existent ID. | ✅ |
+| `PUT` | `/categories/{id}` | Update a category | Protected by `@roles_required('admin')`; rejects duplicate names. | ✅ |
+| `DELETE`| `/categories/{id}` | Delete a category | **Blocked with `409`** if any product is still assigned to it. | ✅ |
 | `GET` | `/products` | List all products | Tests dynamic filters (name, category, min/max price) & pagination. | ✅ |
 | `POST` | `/products` | Add new product | Auto-generates UUID slug, validates stock/price constraints via `ProductCreateSchema`. | ✅ |
 | `PUT` | `/products/{id}` | Update product | Regenerates slug ONLY if the product name is changed. | ✅ |
@@ -449,7 +454,7 @@ While Swagger UI provides excellent endpoint-level interaction, the complete bus
 
 Click the badge below to access the complete JSON collection. You can import this file directly into your local Postman workspace to replicate the End-to-End testing environment.
 
-[![View Postman Collection](https://img.shields.io/badge/Postman-API%20Docs-orange?logo=postman)](./postman-revoshop.json)
+[![View Postman Collection](https://img.shields.io/badge/Postman-API%20Docs-orange?logo=postman)](./API-postman-revoshop.json)
 
 > **Visual Proof: Example of Security & RBAC in Action when a seller tries to change other seller order**
 ![Postman showing 403 Forbidden](assets/img_readme/403forbidden.png)
