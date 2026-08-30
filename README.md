@@ -1,5 +1,11 @@
 # Multi-Vendor E-Commerce API
 
+[![Tests](https://github.com/mfaujian/e-commerce-multivendor-api/actions/workflows/tests.yml/badge.svg)](https://github.com/mfaujian/e-commerce-multivendor-api/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Live API](https://img.shields.io/badge/Live%20API-Railway-8A2BE2)](https://<your-app>.up.railway.app/apidocs)
+
+> 🔗 **Live API Documentation:** [https://e-commerce-multivendor-api.up.railway.app/apidocs/](https://e-commerce-multivendor-api.up.railway.app/apidocs/)
+
 ## Table of Contents
 - [Multi-Vendor E-Commerce API](#multi-vendor-e-commerce-api)
   - [Table of Contents](#table-of-contents)
@@ -16,6 +22,10 @@
     - [Entity Relationship Diagram (ERD)](#entity-relationship-diagram-erd)
   - [Automated Testing \& Quality Assurance](#automated-testing--quality-assurance)
   - [Load Testing (Locust)](#load-testing-locust)
+  - [Infrastructure \& Deployment Readiness](#infrastructure--deployment-readiness)
+  - [Containerization (Docker)](#containerization-docker)
+  - [Cloud Architecture (Railway)](#cloud-architecture-railway)
+    - [Managing the production database (migrations \& seeding)](#managing-the-production-database-migrations--seeding)
   - [Installation \& Initialization](#installation--initialization)
   - [Interactive API Documentation (Swagger)](#interactive-api-documentation-swagger)
     - [1. Authentication \& Users (`/auth`, `/users`)](#1-authentication--users-auth-users)
@@ -28,7 +38,7 @@
 ## Overview
 This repository contains a robust, scalable backend API designed for a multi-tenant e-commerce platform. Built with Python and Flask, it utilizes a single-database configuration for Flask using PostgreSQL and SQLAlchemy. The architecture enforces strict domain boundaries, separating buyers, sellers, and system administrators, making it a highly structured foundation for complex marketplace operations.
 
-The codebase follows a layered **Model-Controller-Service (MCS)** architecture with a dedicated **Marshmallow DTO (Data Transfer Object)** layer for request validation and response serialization — see [Architecture](#architecture) below for the full breakdown.
+The codebase follows a layered **Model-Controller-Service (MCS)** architecture with a dedicated **Marshmallow DTO (Data Transfer Object)** layer for request validation and response serialization — see [Architecture](#architecture) below for the full breakdown. Beyond the application code, this project is fully **containerized with Docker** and **live-deployed on Railway** — see [Containerization](#containerization-docker) and [Cloud Architecture](#cloud-architecture-railway).
 
 ---
 
@@ -43,10 +53,14 @@ The codebase follows a layered **Model-Controller-Service (MCS)** architecture w
 | Migrations | Flask-Migrate (Alembic) |
 | Validation & Serialization (DTO) | Marshmallow |
 | Authentication | Flask-JWT-Extended (JWT Bearer tokens) |
+| Rate Limiting | Flask-Limiter |
 | API Documentation | Flasgger (Swagger UI) |
 | Testing | Pytest — class-based test suites, scoped fixtures, SQLite in-memory DB |
 | Load Testing | Locust |
 | Production Server | Gunicorn |
+| Containerization | Docker |
+| Hosting / PaaS | Railway (Web Service + managed PostgreSQL) |
+| CI | GitHub Actions |
 
 ---
 
@@ -69,7 +83,7 @@ This API follows a **Model-Controller-Service (MCS)** pattern, augmented with a 
 app/
 ├── __init__.py          # Application factory (create_app)
 ├── config.py             # Environment-based configuration
-├── utils.py               # Shared Flask extensions (SQLAlchemy instance)
+├── utils.py               # Shared Flask extensions (SQLAlchemy instance, Limiter)
 ├── models/                # SQLAlchemy ORM models — one file per domain
 │   ├── user.py / seller.py / category.py
 │   └── product.py / cart.py / order.py
@@ -87,8 +101,9 @@ app/
 │   └── cart_controller.py / order_controller.py
 └── middleware/             # Cross-cutting concerns
     ├── auth.py              # Password hashing, role/ownership decorators
-    └── errors.py            # Global JSON error handlers
+    └── errors.py            # Global JSON error handlers (incl. Marshmallow ValidationError)
 run.py                       # Application entry point
+Dockerfile                   # Production container image definition
 ```
 
 **Request flow for a typical write operation** (e.g. `POST /products`):
@@ -185,7 +200,7 @@ erDiagram
         int quantity
     }
 ```
-The database is heavily normalized to ensure data integrity across the marketplace.
+The database is heavily normalized to ensure data integrity across the marketplace. Frequently filtered and sorted columns (`orders.status`, `orders.created_at`, `products.category_id`, `products.seller_id`, `carts.user_id`) are backed by explicit indexes for query performance at scale.
 
 | Table Name | Primary Purpose | Key Relationships |
 | :--- | :--- | :--- |
@@ -200,7 +215,7 @@ The database is heavily normalized to ensure data integrity across the marketpla
 
 ## Automated Testing & Quality Assurance
 
-This backend is safeguarded by a comprehensive **End-to-End (E2E) Test Suite** built with `pytest`, organized into **class-based test suites** (`TestAuthAPI`, `TestProductAPI`, `TestOrderAPI`, `TestSellerAPI`, `TestCategoryAPI`, `TestCartAPI`) backed by session- and function-scoped fixtures in `conftest.py`. The test architecture utilizes isolated SQLite in-memory databases with per-test rollbacks, ensuring zero data leakage between test executions.
+This backend is safeguarded by a comprehensive **End-to-End (E2E) Test Suite** built with `pytest`, organized into **class-based test suites** (`TestAuthAPI`, `TestProductAPI`, `TestOrderAPI`, `TestSellerAPI`, `TestCategoryAPI`, `TestCartAPI`) backed by session- and function-scoped fixtures in `conftest.py`. The test architecture utilizes isolated SQLite in-memory databases with per-test rollbacks, ensuring zero data leakage between test executions. Every push and pull request against `main` automatically triggers this full suite via **GitHub Actions**.
 
 *   **Positive & Negative Testing:** Validates data boundaries (e.g., rejecting negative stock quantities or zero-priced items).
 *   **Security Validations:** Actively tests against Horizontal Privilege Escalation (IDOR), ensuring buyers cannot access or modify orders belonging to other accounts.
@@ -237,6 +252,108 @@ Then open [http://localhost:8089](http://localhost:8089) in your browser to conf
 
 ---
 
+## Infrastructure & Deployment Readiness
+
+Beyond passing its own test suite, this API includes several production-hardening measures that only become relevant once real traffic and real hosting are involved:
+
+*   **Structured, Platform-Aware Logging:** Uses Python's `logging` module (not `print()`) with a console handler that integrates with any hosting platform's log dashboard. File-based rotating logs are only enabled when `IS_PRODUCTION` is unset — this avoids writing to disk on platforms with an ephemeral filesystem (like Railway), where local log files are wiped on every redeploy.
+*   **Database Connection Resilience:** `SQLALCHEMY_ENGINE_OPTIONS` is configured with `pool_pre_ping=True` and a `pool_recycle` interval, preventing the common "server closed the connection unexpectedly" failure that occurs when a managed Postgres provider silently drops idle connections.
+*   **Rate Limiting:** `Flask-Limiter` protects `POST /auth/login` (5/minute) and `POST /users` (10/hour) against brute-force and registration-spam attacks.
+    > ⚠️ **Known limitation:** the current rate limiter uses in-memory storage, which is *not* shared across Gunicorn's multiple worker processes — under `--workers 2`, the effective limit is roughly double the configured value, since each worker tracks its own counters independently. A Redis-backed store closes this gap; see [Future Enhancements](#future-enhancements).
+*   **Environment-Aware CORS:** Allowed origins are controlled via the `CORS_ORIGINS` environment variable rather than hardcoded, so the same codebase can run wide-open in development and locked-down in production.
+*   **Fail-Fast Configuration:** The app refuses to start if `DATABASE_URL` or `JWT_SECRET_KEY` are missing, rather than silently falling back to an insecure default.
+*   **Database Scheme Normalization:** `config.py` automatically rewrites a legacy `postgres://` connection string (as issued by some hosting providers, including Railway) into the `postgresql://` scheme SQLAlchemy 1.4+ requires — without this, the app would crash on startup on those providers.
+*   **Continuous Integration:** Every push and pull request runs the full `pytest` suite via GitHub Actions (`.github/workflows/tests.yml`), catching regressions before they reach `main`.
+
+---
+
+## Containerization (Docker)
+
+The application is fully containerized — the same `Dockerfile` in this repository is what builds the image actually running in production (see [Cloud Architecture](#cloud-architecture-railway)), not a separate demo file.
+
+```dockerfile
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+RUN useradd --create-home --shell /bin/bash appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+
+CMD ["sh", "-c", "exec gunicorn run:app --bind 0.0.0.0:$PORT --workers 2"]
+```
+
+A few deliberate choices worth calling out:
+*   **Non-root user (`appuser`):** the app never runs as root inside the container, following the Principle of Least Privilege — if the application layer is ever compromised, the blast radius is limited to an unprivileged user.
+*   **`exec` in the CMD:** ensures Gunicorn runs as PID 1 and receives shutdown signals (`SIGTERM`) directly, enabling graceful shutdowns instead of an abrupt kill.
+*   **`$PORT` binding:** the container binds to whatever port the hosting platform injects at runtime rather than a hardcoded value — required by Railway, Render, and most modern PaaS providers.
+
+**Run it locally:**
+```bash
+docker build -t multivendor-api .
+
+docker run -p 8000:8000 \
+  -e DATABASE_URL="your-database-url" \
+  -e JWT_SECRET_KEY="your-secret-key" \
+  -e PORT=8000 \
+  multivendor-api
+```
+Then visit `http://localhost:8000/health`.
+
+> **Visual Proof: Container Running Locally**
+![Docker Desktop showing the multivendor-api container running with its port mapping and status](assets/img_readme/docker-desktop-container.png)
+
+---
+
+## Cloud Architecture (Railway)
+
+This API is deployed on **Railway**, a container-native PaaS. A single Railway project hosts two services that communicate over Railway's private network:
+
+```mermaid
+flowchart LR
+    A[Developer: git push] --> B[GitHub Repository]
+    B -->|Webhook trigger| C[Railway: Build via Dockerfile]
+    C --> D[Web Service Container]
+    D <-->|Private network<br/>postgres.railway.internal| E[(PostgreSQL Service)]
+    E -.->|TCP Proxy / Public Networking<br/>external tools only| F[DBeaver - Local Machine]
+    D --> G[Public Domain<br/>*.up.railway.app]
+```
+
+*   **Web Service:** built directly from this repository's `Dockerfile` on every push to `main` — no Nixpacks auto-detection or Procfile involved, since the Dockerfile's `CMD` already fully specifies how the app starts. Railway injects the runtime `PORT`, which Gunicorn binds to dynamically.
+*   **PostgreSQL Service:** a managed Postgres instance, private by default. The Web Service connects to it using Railway's internal service reference (`${{Postgres.DATABASE_URL}}`) rather than a manually copy-pasted connection string — this resolves automatically at deploy time, uses the private network (no egress cost, lower latency), and never needs updating if the database credentials rotate.
+*   **TCP Proxy (Public Networking):** disabled by default for security — explicitly enabled on the Postgres service to expose a `DATABASE_PUBLIC_URL`, used *only* for connecting external tools (e.g. DBeaver) and running one-off administrative commands (schema migrations) from a local machine. The application itself never uses this public URL.
+*   **Environment Variables:** `JWT_SECRET_KEY`, `CORS_ORIGINS`, and `IS_PRODUCTION` are configured directly on the Web Service, separate from the database credentials.
+
+> **Visual Proof: Railway Project Architecture**
+![Railway dashboard showing the Web Service and PostgreSQL service connected within one project](assets/img_readme/railway-architecture-overview.png)
+
+> **Visual Proof: Live, Deployed API**
+![Swagger UI opened at the live Railway domain, confirming the API is publicly reachable and fully documented](assets/img_readme/railway-live-apidocs.png)
+
+### Managing the production database (migrations & seeding)
+Because this project runs on Railway's free trial tier (no shell access), schema migrations and seed data are applied from a local machine, explicitly pointed at the production database for a single command only — the local `.env` file is never modified for this:
+```bash
+# Apply schema migrations
+DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" flask db upgrade
+
+# Populate the live database with sample data
+DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" python seed.py
+```
+`seed.py` checks for existing records before inserting, so it is safe to re-run against production at any time without creating duplicates.
+
+---
+
 ## Installation & Initialization
 
 1. Clone the repository and navigate to the root directory.
@@ -268,6 +385,7 @@ Then open [http://localhost:8089](http://localhost:8089) in your browser to conf
 ```bash
    gunicorn run:app
 ```
+   Or, to run it exactly as it runs in production, via Docker — see [Containerization](#containerization-docker).
 
 ---
 
@@ -278,6 +396,8 @@ This system is thoroughly documented using **Flasgger**.
 Once the local development server is running, navigate to the following URL in your browser to access the interactive Swagger UI and test endpoints directly:
 👉 **[http://127.0.0.1:5000/apidocs](http://127.0.0.1:5000/apidocs)**
 
+The same documentation is also available on the live deployment — see the [Live API Documentation](#multi-vendor-e-commerce-api) link at the top of this README.
+
 > **Visual Proof: Developer Experience**
 ![Swagger UI interface showing grouped endpoints](assets/img_readme/swaggerUI.png)
 
@@ -286,34 +406,34 @@ Below is the testing matrix covering all core functionalities.
 ### 1. Authentication & Users (`/auth`, `/users`)
 | Method | Endpoint | Description | Testing Criteria | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/users` | Register a new user | Validates payload shape via `UserRegisterSchema`; rejects duplicate emails. | [PASS] |
-| `POST` | `/auth/login` | Authenticate & get JWT | Validates credentials, reactivates soft-deleted accounts. | [PASS] |
-| `GET` | `/users/me` | Get current identity | Successfully extracts data from JWT. | [PASS] |
-| `DELETE`| `/users/{id}` | Deactivate account | Triggers cascade soft-delete for sellers and products. | [PASS] |
+| `POST` | `/users` | Register a new user | Validates payload shape via `UserRegisterSchema`; rejects duplicate emails; rate-limited to 10/hour. | ✅ |
+| `POST` | `/auth/login` | Authenticate & get JWT | Validates credentials, reactivates soft-deleted accounts; rate-limited to 5/minute. | ✅ |
+| `GET` | `/users/me` | Get current identity | Successfully extracts data from JWT. | ✅ |
+| `DELETE`| `/users/{id}` | Deactivate account | Triggers cascade soft-delete for sellers and products. | ✅ |
 
 ### 2. Store Management (`/sellers`)
 | Method | Endpoint | Description | Testing Criteria | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/sellers` | Register a store | Restricts 1 store per user, validates duplicate store names. | [PASS] |
-| `PUT` | `/sellers` | Update store profile | Ensures only the owner can update. | [PASS] |
+| `POST` | `/sellers` | Register a store | Restricts 1 store per user, validates duplicate store names. | ✅ |
+| `PUT` | `/sellers` | Update store profile | Ensures only the owner can update. | ✅ |
 
 ### 3. Catalog Management (`/categories`, `/products`)
 | Method | Endpoint | Description | Testing Criteria | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/categories` | Create category | Protected by `@roles_required('admin')`. | [PASS] |
-| `GET` | `/products` | List all products | Tests dynamic filters (name, category, min/max price) & pagination. | [PASS] |
-| `POST` | `/products` | Add new product | Auto-generates UUID slug, validates stock/price constraints via `ProductCreateSchema`. | [PASS] |
-| `PUT` | `/products/{id}` | Update product | Regenerates slug ONLY if the product name is changed. | [PASS] |
-| `DELETE`| `/products/{id}` | Delete a product | **Blocked with `409`** if the product is tied to a `pending`, `processing`, or `shipped` order. | [PASS] |
+| `POST` | `/categories` | Create category | Protected by `@roles_required('admin')`. | ✅ |
+| `GET` | `/products` | List all products | Tests dynamic filters (name, category, min/max price) & pagination. | ✅ |
+| `POST` | `/products` | Add new product | Auto-generates UUID slug, validates stock/price constraints via `ProductCreateSchema`. | ✅ |
+| `PUT` | `/products/{id}` | Update product | Regenerates slug ONLY if the product name is changed. | ✅ |
+| `DELETE`| `/products/{id}` | Delete a product | **Blocked with `409`** if the product is tied to a `pending`, `processing`, or `shipped` order. | ✅ |
 
 ### 4. Cart & Checkout (`/carts`, `/orders`)
 | Method | Endpoint | Description | Testing Criteria | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/carts/items` | Add to cart | Prevents sellers from buying their own products, checks stock. | [PASS] |
-| `POST` | `/orders/checkout` | Process transaction | Successfully splits 1 cart into multiple distinct seller orders. | [PASS] |
-| `GET` | `/orders` | Get user orders | Properly filters order history by `?status=pending/shipped`. | [PASS] |
-| `PUT` | `/orders/{id}/status`| Update logistics | Admins can update anything. Sellers manage shipping. Buyers can only cancel. | [PASS] |
-| `DELETE`| `/orders/{id}` | Delete an order record | Only succeeds when order status is `cancelled`; otherwise rejected. | [PASS] |
+| `POST` | `/carts/items` | Add to cart | Prevents sellers from buying their own products, checks stock. | ✅ |
+| `POST` | `/orders/checkout` | Process transaction | Successfully splits 1 cart into multiple distinct seller orders. | ✅ |
+| `GET` | `/orders` | Get user orders | Filters by `?status=`, searches by `?product=`, sorts by `?sort=asc/desc`, paginated. | ✅ |
+| `PUT` | `/orders/{id}/status`| Update logistics | Admins can update anything. Sellers manage shipping. Buyers can only cancel. | ✅ |
+| `DELETE`| `/orders/{id}` | Delete an order record | Only succeeds when order status is `cancelled`; otherwise rejected. | ✅ |
 
 ---
 
@@ -340,9 +460,9 @@ Click the badge below to access the complete JSON collection. You can import thi
 
 To further optimize the marketplace ecosystem and elevate the system to enterprise-grade standards, the following features are planned for future iterations:
 
+*   **Distributed Rate Limiting:** Migrating `Flask-Limiter`'s storage backend from in-memory to a Redis-backed store, so rate limits are enforced consistently across all Gunicorn worker processes rather than per-worker (see [Infrastructure & Deployment Readiness](#infrastructure--deployment-readiness)).
 *   **Advanced Authentication:** Implementing a dual-token `JWT architecture (Access & Refresh Tokens)` with Token Freshness to improve UX and secure sensitive endpoints.
-*   **Rate Limiting:** Adding `Flask-Limiter` to protect authentication and transaction endpoints against brute-force attacks.
 *   **Direct Checkout API:** Building a decoupled `"Buy Now"` route to bypass the cart state, reducing user friction for single-item purchases.
-*   **CI/CD Pipeline:** Automating the `pytest` suite and a Locust smoke test via GitHub Actions on every pull request.
+*   **API Versioning:** Introducing a `/api/v1/` prefix ahead of any breaking changes, to support long-term client compatibility.
 
-> ✅ Two items previously listed here have since been completed: request/response validation now runs through dedicated **Marshmallow DTO schemas** in a layered MCS architecture (see [Architecture](#architecture)), and database schema evolution is managed via **Flask-Migrate**.
+> ✅ Several items previously listed here have since been completed: request/response validation now runs through dedicated **Marshmallow DTO schemas** in a layered MCS architecture, database schema evolution is managed via **Flask-Migrate**, **rate limiting** protects auth endpoints, and a **CI pipeline** runs the full test suite on every push (see [Infrastructure & Deployment Readiness](#infrastructure--deployment-readiness)). The application is also fully **containerized** and **live-deployed** (see [Containerization](#containerization-docker) and [Cloud Architecture](#cloud-architecture-railway)).
