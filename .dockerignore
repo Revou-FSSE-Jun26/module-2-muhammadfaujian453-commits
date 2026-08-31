@@ -1,16 +1,45 @@
+# --- Docker Infrastructure ---
+.dockerignore
+Dockerfile
+
+# --- Repository & CI/CD ---
 .git
+.github/
+.gitignore
+
+# --- Python Virtual Environments & Dependencies ---
 .env
 .venv
 venv/
-__pycache__/
-*.pyc
-tests/
-.pytest_cache/
-.coverage
-htmlcov/
-logs/
-.github/
-assets/
-*.md
-postman-revoshop.json
 requirements-dev.txt
+
+# --- Python Cache & Compilation ---
+**/__pycache__/
+**/*.pyc
+
+# --- Testing & Code Coverage ---
+**/tests/
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
+**/logs/
+
+# --- Documentation & Assets ---
+**/assets/
+**/*.md
+**/*.jpg
+**/*.jpeg
+**/*.png
+**/*.gif
+
+# --- API Testing ---
+**/postman-ecommerce-API.json
+**/*.postman_environment.json
+
+# --- Editor & IDE Configs ---
+.vscode/
+.idea/
+
+# --- System Garbage Files ---
+**/.DS_Store
+**/Thumbs.db

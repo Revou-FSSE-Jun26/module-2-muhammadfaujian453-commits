@@ -1,13 +1,16 @@
-# Multi-Vendor E-Commerce Backend
+# Multivendor E-Commerce Backend
 
-[![Tests](https://github.com/mfaujian/multivendor-ecommerce-backend/actions/workflows/tests.yml/badge.svg)](https://github.com/mfaujian/multivendor-ecommerce-backend/actions/workflows/tests.yml)
+[![Tests](https://img.shields.io/badge/Pytest-84%25%20Coverage-brightgreen?logo=pytest&logoColor=white)](https://github.com/mfaujian/multivendor-ecommerce-backend/actions/workflows/tests.yml)
+[![Live API](https://img.shields.io/badge/Railway-Live%20API-8A2BE2?logo=railway&logoColor=white)](https://multivendor-ecommerce-backend.up.railway.app/apidocs/)
+[![Postman](https://img.shields.io/badge/Postman-API%20Docs-FF6C37?logo=postman&logoColor=white)](./postman-ecommerce-API.json)
+[![Python](https://img.shields.io/badge/Python-Dependencies-3776AB?logo=python&logoColor=white)](./requirements.txt)
+[![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker&logoColor=white)](./Dockerfile)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Live API](https://img.shields.io/badge/Live%20API-Railway-8A2BE2)](https://multivendor-ecommerce-backend.up.railway.app/apidocs/)
 
-> 🔗 **Live API Documentation:** [Multivendor E-Commerce](https://multivendor-ecommerce-backend.up.railway.app/apidocs/)
+---
 
 ## Table of Contents
-- [Multi-Vendor E-Commerce Backend](#multi-vendor-e-commerce-backend)
+- [Multivendor E-Commerce Backend](#multivendor-e-commerce-backend)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Tech Stack](#tech-stack)
@@ -454,7 +457,7 @@ While Swagger UI provides excellent endpoint-level interaction, the complete bus
 
 Click the badge below to access the complete JSON collection. You can import this file directly into your local Postman workspace to replicate the End-to-End testing environment.
 
-[![View Postman Collection](https://img.shields.io/badge/Postman-API%20Docs-orange?logo=postman)](./API-postman-revoshop.json)
+[![View Postman Collection](https://img.shields.io/badge/Postman-API%20Docs-orange?logo=postman)](./postman-ecommerce-API.json)
 
 > **Visual Proof: Example of Security & RBAC in Action when a seller tries to change other seller order**
 ![Postman showing 403 Forbidden](assets/img_readme/403forbidden.png)
