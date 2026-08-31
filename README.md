@@ -1,13 +1,13 @@
-# Multi-Vendor E-Commerce API
+# Multi-Vendor E-Commerce Backend
 
-[![Tests](https://github.com/mfaujian/e-commerce-multivendor-api/actions/workflows/tests.yml/badge.svg)](https://github.com/mfaujian/e-commerce-multivendor-api/actions/workflows/tests.yml)
+[![Tests](https://github.com/mfaujian/multivendor-ecommerce-backend/actions/workflows/tests.yml/badge.svg)](https://github.com/mfaujian/multivendor-ecommerce-backend/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Live API](https://img.shields.io/badge/Live%20API-Railway-8A2BE2)](https://e-commerce-multivendor-api.up.railway.app/apidocs/)
+[![Live API](https://img.shields.io/badge/Live%20API-Railway-8A2BE2)](https://multivendor-ecommerce-backend.up.railway.app/apidocs/)
 
-> 🔗 **Live API Documentation:** [https://e-commerce-multivendor-api.up.railway.app/apidocs/](https://e-commerce-multivendor-api.up.railway.app/apidocs/)
+> 🔗 **Live API Documentation:** [Multivendor E-Commerce](https://multivendor-ecommerce-backend.up.railway.app/apidocs/)
 
 ## Table of Contents
-- [Multi-Vendor E-Commerce API](#multi-vendor-e-commerce-api)
+- [Multi-Vendor E-Commerce Backend](#multi-vendor-e-commerce-backend)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Tech Stack](#tech-stack)
@@ -223,7 +223,7 @@ This backend is safeguarded by a comprehensive **End-to-End (E2E) Test Suite** b
 *   **Isolated Unit Tests:** `tests/test_services.py` (`TestProductService`, `TestAuthMiddleware`) tests pure business logic — slug generation, password hashing — directly against the service and middleware layers, with no Flask request/response cycle involved.
 
 > **Visual Proof: E2E Test Coverage**
-![Pytest terminal showing 100% Passed metrics across 29+ test cases](assets/img_readme/pytestresult.png)
+![Pytest terminal showing 100% Passed metrics across 35/35 class-based E2E test](assets/img_readme/pytestresult.png)
 
 ---
 
