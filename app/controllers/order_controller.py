@@ -131,7 +131,7 @@ def get_my_orders():
     }), 200
     
 
-@order_bp.route('/<int:order_id>', methods=['GET'])
+@order_bp.route('/<uuid:order_id>', methods=['GET'])
 @jwt_required()
 def get_order_details(order_id):
     """Get specific order details and its items
@@ -170,7 +170,7 @@ def get_order_details(order_id):
     }), 200 
 
 
-@order_bp.route('/<int:order_id>/status', methods=['PUT'])
+@order_bp.route('/<uuid:order_id>/status', methods=['PUT'])
 @jwt_required()
 def update_order_status(order_id):
     """Update order status (Logistics/Cancellation)
@@ -225,7 +225,7 @@ def update_order_status(order_id):
     }), 200
 
 
-@order_bp.route('/<int:order_id>', methods=['DELETE'])
+@order_bp.route('/<uuid:order_id>', methods=['DELETE'])
 @jwt_required()
 def delete_order(order_id):
     """Permanently delete a cancelled order
@@ -260,4 +260,4 @@ def delete_order(order_id):
     if error:
         return jsonify({"error": error["message"]}), error["status_code"]
 
-    return jsonify({"message": f"Order {order_id} has been permanently deleted."}), 200
+    return jsonify({"message": f"Order {order_id} has been deleted."}), 200

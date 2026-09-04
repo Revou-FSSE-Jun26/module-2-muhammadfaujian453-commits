@@ -21,7 +21,7 @@ class OrderItemResponseSchema(Schema):
 
 
 class OrderResponseSchema(Schema):
-    id = fields.Int(dump_only=True)
+    id = fields.UUID(dump_only=True)
     user_id = fields.Int()
     seller_id = fields.Int()
     status = fields.Str()

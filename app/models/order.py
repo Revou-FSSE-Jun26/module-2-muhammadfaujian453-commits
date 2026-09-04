@@ -1,3 +1,5 @@
+import uuid
+from sqlalchemy import Uuid
 from app.utils import db
 
 # =========================================================================
@@ -6,7 +8,7 @@ from app.utils import db
 class Orders(db.Model):
     __tablename__ = 'orders'
 
-    id = db.Column(db.Integer, primary_key = True)
+    id = db.Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='RESTRICT'), nullable = False)
     seller_id = db.Column(db.Integer, db.ForeignKey('sellers.id', ondelete='RESTRICT'), nullable = False)
     status = db.Column(
@@ -17,6 +19,7 @@ class Orders(db.Model):
     )
     total_amount = db.Column(db.Numeric(12, 2), nullable = False)
     shipping_address = db.Column(db.Text, nullable=  False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     created_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), index = True)
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
@@ -37,7 +40,7 @@ class Orders(db.Model):
 class OrderItems(db.Model):
     __tablename__ = 'order_items'
     
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), primary_key=True)
+    order_id = db.Column(Uuid(as_uuid=True), db.ForeignKey('orders.id', ondelete='CASCADE'), primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('products.id', ondelete='RESTRICT'), primary_key=True)
     
     quantity = db.Column(db.Integer, nullable=False)

@@ -58,7 +58,7 @@ def checkout(user_id, validated_data):
 
 
 def get_my_orders(user_id, status_filter=None, product_search=None, sort='desc', page=1, limit=10):
-    query = Orders.query.filter_by(user_id=user_id)
+    query = Orders.query.filter_by(user_id=user_id, is_active=True)
 
     if status_filter:
         query = query.filter_by(status=status_filter)
@@ -78,7 +78,7 @@ def get_my_orders(user_id, status_filter=None, product_search=None, sort='desc',
 
 
 def get_order_details(order_id, requester_id, requester_role):
-    order = db.session.get(Orders, order_id)
+    order = Orders.query.filter_by(id=order_id, is_active=True).first()
     if not order:
         return None, {"message": "Order not found!", "status_code": 404}
     if requester_role != 'admin' and order.user_id != requester_id and order.seller_id != requester_id:
@@ -118,7 +118,7 @@ def update_order_status(order_id, requester_id, requester_role, validated_data):
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 def delete_order(order_id, requester_id, requester_role):
-    order = db.session.get(Orders, order_id)
+    order = Orders.query.filter_by(id=order_id, is_active=True).first()
     if not order:
         return None, {"message": "Order not found", "status_code": 404}
 
@@ -129,7 +129,7 @@ def delete_order(order_id, requester_id, requester_role):
         return None, {"message": "Order is not cancelled (immutable constraint)", "status_code": 400}
 
     try:
-        db.session.delete(order)
+        order.is_active = False
         db.session.commit()
         return True, None
     except SQLAlchemyError as e:
