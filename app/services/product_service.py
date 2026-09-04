@@ -57,6 +57,13 @@ def get_product_by_id(product_id):
     return product, None
 
 
+def get_product_by_slug(slug):
+    product = Products.query.filter_by(slug=slug, is_active=True).first()
+    if not product:
+        return None, {"message": "Product not found or is no longer active!", "status_code": 404}
+    return product, None
+
+
 def update_product(product_id, seller_id, validated_data):
     product = Products.query.filter_by(id=product_id, is_active=True).first()
     if not product:
@@ -84,11 +91,11 @@ def update_product(product_id, seller_id, validated_data):
         return None, {"message": "A database error occurred processing your request.", "status_code": 500}
 
 
-def delete_product(product_id, seller_id):
+def delete_product(product_id, requester_id, requester_role):
     product = Products.query.filter_by(id=product_id, is_active=True).first()
     if not product:
         return None, {"message": "Product not found or already deactivated!", "status_code": 404}
-    if product.seller_id != seller_id:
+    if requester_role != 'admin' and product.seller_id != requester_id:
         return None, {"message": "Unauthorized! You can only delete your own products.", "status_code": 403}
 
     active_order_item = (
@@ -107,6 +114,7 @@ def delete_product(product_id, seller_id):
         product.is_active = False
         db.session.commit()
         return product, None
+    
     except SQLAlchemyError as e:
         db.session.rollback()
         logging.error(f"[DB ERROR]: {str(e.__dict__.get('orig', e))}")

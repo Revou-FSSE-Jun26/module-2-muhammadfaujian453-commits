@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app.middleware.auth import seller_required
 from app.schemas import ProductCreateSchema, ProductUpdateSchema, ProductResponseSchema
 from app.services import product_service
@@ -164,7 +164,37 @@ def get_product_by_id(product_id):
     return jsonify({
         "message": "Product retrieved successfully", 
         "product": response_schema.dump(product)
-    }), 200        
+    }), 200    
+
+
+@product_bp.route('/slug/<string:slug>', methods=['GET'])
+def get_product_by_slug(slug):
+    """Get a specific product by its slug
+    ---
+    tags:
+      - Products
+    parameters:
+      - in: path
+        name: slug
+        type: string
+        required: true
+        example: "wireless-mouse-a1b2c3d4"
+    responses:
+      200:
+        description: Product details
+      404:
+        description: Product not found or is no longer active
+      500:
+        description: Internal server error
+    """
+    product, error = product_service.get_product_by_slug(slug)
+    if error:
+        return jsonify({"error": error["message"]}), error["status_code"]
+
+    return jsonify({
+        "message": "Product retrieved successfully",
+        "product": response_schema.dump(product)
+    }), 200
 
 
 @product_bp.route('/<int:product_id>', methods=['PUT'])
@@ -230,9 +260,8 @@ def update_product(product_id):
 
 @product_bp.route('/<int:product_id>', methods=['DELETE'])
 @jwt_required()
-@seller_required()
 def delete_product(product_id):
-    """Soft delete a product
+    """Delete a product (Owner Seller or Admin)
     ---
     tags:
       - Products
@@ -257,9 +286,10 @@ def delete_product(product_id):
       500:
         description: Internal server error
     """
-    seller_id = int(get_jwt_identity())
+    requester_id = int(get_jwt_identity())
+    requester_role = get_jwt().get('role')
 
-    product, error = product_service.delete_product(product_id, seller_id)
+    product, error = product_service.delete_product(product_id, requester_id, requester_role)
     if error:
         return jsonify({"error": error["message"]}), error["status_code"]
 
