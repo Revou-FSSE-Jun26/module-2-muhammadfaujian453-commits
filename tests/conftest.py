@@ -8,6 +8,7 @@ def app_instance():
     app = create_app({
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+        "SQLALCHEMY_ENGINE_OPTIONS": {"poolclass": "StaticPool"},
         "WTF_CSRF_ENABLED": False,
         "JWT_SECRET_KEY": "this-is-the-secret-key-for-testing-minimum-32-characters",
         "RATELIMIT_ENABLED": False

@@ -1,3 +1,4 @@
+import logging
 from flask import jsonify
 from marshmallow.exceptions import ValidationError
 
@@ -21,4 +22,5 @@ def register_error_handlers(app):
 
     @app.errorhandler(500)
     def internal_server_error(error):
+        logging.error("Unhandled exception", exc_info=True)
         return jsonify({"error": "Internal Server Error", "message": "Something went wrong on the server."}), 500

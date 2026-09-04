@@ -16,8 +16,6 @@ def authenticate_user(email, password):
         user.is_active = True
         if user.seller_profile:
             user.seller_profile.is_active = True
-            for product in user.seller_profile.products:
-                product.is_active = True
         db.session.commit()
         message = "Login successful. Your account has been reactivated!"
 

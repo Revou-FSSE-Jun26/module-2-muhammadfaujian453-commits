@@ -21,7 +21,10 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": 280,
+        "pool_size": 5,
+        "max_overflow": 2,
     }
+
 
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 
