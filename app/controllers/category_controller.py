@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from app.middleware.auth import roles_required
-from app.schemas import CategoryCreateSchema, CategoryUpdateSchema, CategoryResponseSchema
+from app.schemas import CategoryCreateSchema, CategoryUpdateSchema, CategoryResponseSchema, CategoryDetailResponseSchema
+from app.schemas import ProductResponseSchema
 from app.services import category_service
 
 # Blueprint
@@ -12,6 +13,7 @@ create_schema = CategoryCreateSchema()
 update_schema = CategoryUpdateSchema()
 response_schema = CategoryResponseSchema()
 list_response_schema = CategoryResponseSchema(many=True)
+detail_response_schema = CategoryDetailResponseSchema()
 
 
 # =========================================================================
@@ -91,7 +93,7 @@ def get_categories():
 
 @category_bp.route('/<int:category_id>', methods=['GET'])
 def get_category_by_id(category_id):
-    """Get a specific category by ID
+    """Get a specific category by ID, including its active products
     ---
     tags:
       - Categories
@@ -102,19 +104,21 @@ def get_category_by_id(category_id):
         required: true
     responses:
       200:
-        description: Category details
+        description: Category details with its subcategories and active products
       404:
         description: Category not found
       500:
         description: Internal server error
     """
-    category, error = category_service.get_category_by_id(category_id)
+    result, error = category_service.get_category_by_id(category_id)
     if error:
         return jsonify({"error": error["message"]}), error["status_code"]
 
+    category_data = detail_response_schema.dump(result)
+
     return jsonify({
         "message": "Category retrieved successfully",
-        "category": response_schema.dump(category)
+        "category": category_data
     }), 200
 
 
