@@ -2,7 +2,7 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, redirect
 from flask_cors import CORS
 from sqlalchemy.exc import SQLAlchemyError
 from flask_migrate import Migrate
@@ -54,6 +54,12 @@ def create_app(test_config=None):
     JWTManager(app)
     
     swagger_template = {
+        "info": {
+            "title": "Multivendor E-Commerce API",
+            "description": "A multi-tenant marketplace backend with split-order checkout, role-based access control, and layered service architecture.",
+            "version": "1.0.0"
+        },
+
         "securityDefinitions": {
             "Bearer": {
                 "type": "apiKey",
@@ -64,7 +70,28 @@ def create_app(test_config=None):
         }
     }
 
-    Swagger(app, template=swagger_template)
+    swagger_config = {
+        "headers": [],
+        "specs": [
+            {
+                "endpoint": "apispec",
+                "route": '/apispec_1.json',
+                "rule_filter": lambda rule: True,
+                "model_filter": lambda tag: True,
+            }
+        ],
+        "static_url_path": "/flasgger_static",
+        "swagger_ui": True,
+        "specs_route": "/swagger-ui/"
+    }
+
+    Swagger(app, template=swagger_template, config=swagger_config)
+
+    @app.route('/apidocs')
+    @app.route('/apidocs/')
+    @app.route('/swagger-ui')
+    def redirect_to_swagger():
+        return redirect('/swagger-ui/')
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)

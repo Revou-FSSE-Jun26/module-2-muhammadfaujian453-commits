@@ -1,7 +1,7 @@
 # Multivendor E-Commerce Backend
 
 [![Tests](https://img.shields.io/badge/Pytest-84%25%20Coverage-brightgreen?logo=pytest&logoColor=white)](https://github.com/mfaujian/multivendor-ecommerce-backend/actions/workflows/tests.yml)
-[![Live API](https://img.shields.io/badge/Railway-Live%20API-8A2BE2?logo=railway&logoColor=white)](https://multivendor-ecommerce-backend.up.railway.app/apidocs/)
+[![Live API](https://img.shields.io/badge/Railway-Live%20API-8A2BE2?logo=railway&logoColor=white)](https://multivendor-ecommerce-backend.up.railway.app/swagger-ui/)
 [![Postman](https://img.shields.io/badge/Postman-API%20Docs-FF6C37?logo=postman&logoColor=white)](./postman-ecommerce-API.json)
 [![Python](https://img.shields.io/badge/Python-Dependencies-3776AB?logo=python&logoColor=white)](./requirements.txt)
 [![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker&logoColor=white)](./Dockerfile)
@@ -398,7 +398,7 @@ DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" python seed.py
 This system is thoroughly documented using **Flasgger**.
 
 Once the local development server is running, navigate to the following URL in your browser to access the interactive Swagger UI and test endpoints directly:
-👉 **[http://127.0.0.1:5000/apidocs](http://127.0.0.1:5000/apidocs)**
+👉 **[http://127.0.0.1:5000/swagger-ui/](http://127.0.0.1:5000/swagger-ui/)**
 
 The same documentation is also available on the live deployment — see the [Live API Documentation](#multi-vendor-e-commerce-api) link at the top of this README.
 
