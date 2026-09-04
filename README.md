@@ -400,7 +400,7 @@ This system is thoroughly documented using **Flasgger**.
 Once the local development server is running, navigate to the following URL in your browser to access the interactive Swagger UI and test endpoints directly:
 👉 **[http://127.0.0.1:5000/swagger-ui/](http://127.0.0.1:5000/swagger-ui/)**
 
-The same documentation is also available on the live deployment — see the [Live API Documentation](#multi-vendor-e-commerce-api) link at the top of this README.
+The same documentation is also available on the live deployment — see the [Live API Documentation](#multivendor-e-commerce-backend) link at the top of this README.
 
 > **Visual Proof: Developer Experience**
 ![Swagger UI interface showing grouped endpoints](assets/img_readme/swaggerUI.png)
