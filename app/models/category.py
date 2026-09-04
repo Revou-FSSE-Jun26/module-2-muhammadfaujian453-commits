@@ -9,8 +9,15 @@ class Categories(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     name = db.Column(db.String(100),nullable = False, unique = True)
     description = db.Column(db.Text)
+    parent_id = db.Column(db.Integer, db.ForeignKey('categories.id', ondelete='RESTRICT'), nullable=True, index=True)
 
     created_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default = db.func.now(), onupdate = db.func.now())
 
     products = db.relationship('Products', back_populates = 'category', lazy = 'selectin')
+
+    subcategories = db.relationship(
+        'Categories',
+        backref=db.backref('parent', remote_side=[id]),
+        lazy='selectin'
+    )
