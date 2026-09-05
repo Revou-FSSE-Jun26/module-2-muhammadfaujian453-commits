@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from app.middleware.auth import roles_required
-from app.schemas import CategoryCreateSchema, CategoryUpdateSchema, CategoryResponseSchema, CategoryDetailResponseSchema
+from app.schemas import CategoryCreateSchema, CategoryUpdateSchema, CategoryResponseSchema
 from app.schemas import ProductResponseSchema
 from app.services import category_service
 
@@ -13,7 +13,6 @@ create_schema = CategoryCreateSchema()
 update_schema = CategoryUpdateSchema()
 response_schema = CategoryResponseSchema()
 list_response_schema = CategoryResponseSchema(many=True)
-detail_response_schema = CategoryDetailResponseSchema()
 
 
 # =========================================================================
