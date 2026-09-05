@@ -86,9 +86,18 @@ def get_order_details(order_id, requester_id, requester_role):
     return order, None
 
 
+ORDER_STATUS_TRANSITIONS = {
+    'pending': {'processing', 'cancelled'},
+    'processing': {'shipped', 'cancelled'},
+    'shipped': {'delivered'},
+    'delivered': set(),
+    'cancelled': set(),
+}
+
+
 def update_order_status(order_id, requester_id, requester_role, validated_data):
     new_status = validated_data['status']
-    order = db.session.get(Orders, order_id)
+    order = Orders.query.filter_by(id=order_id, is_active=True).first()
     if not order:
         return None, {"message": "Order not found!", "status_code": 404}
 
@@ -101,6 +110,12 @@ def update_order_status(order_id, requester_id, requester_role, validated_data):
                 return None, {"message": "Sellers cannot cancel orders. Contact admin.", "status_code": 403}
         else:
             return None, {"message": "Unauthorized! You are not involved in this order.", "status_code": 403}
+
+    if new_status not in ORDER_STATUS_TRANSITIONS.get(order.status, set()):
+        return None, {
+            "message": f"Cannot change status from '{order.status}' to '{new_status}'.",
+            "status_code": 409
+        }
 
     try:
         if new_status == 'cancelled' and order.status != 'cancelled':

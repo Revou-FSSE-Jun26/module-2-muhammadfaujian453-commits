@@ -105,22 +105,17 @@ def create_app(test_config=None):
     @app.route('/health')
     def index():
         try:
-            status = "Database Connection Successfull!"
             db.session.execute(db.text('SELECT 1'))
-            logging.info("Database Connection Successfull!")
-
+            logging.info("Database connection successful.")
+            return jsonify({"status": "healthy", "database": "connected"}), 200
         except SQLAlchemyError as e:
-            status = "Database Connection Failed!"
-            logging.error(f"Database Connection Failed: {e}")
-
+            logging.error(f"Database connection failed: {e}")
+            return jsonify({"status": "unhealthy", "database": "disconnected"}), 503
         except Exception as e:
-            status = "Connection Failed!"
-            logging.error(f"General Error: {e}")
-            
+            logging.error(f"General error: {e}")
+            return jsonify({"status": "unhealthy", "database": "error"}), 503
         finally:
             db.session.close()
-
-        return jsonify({"status": status})
 
     register_error_handlers(app)
 
