@@ -1,6 +1,6 @@
 # Multivendor E-Commerce Backend
 
-[![Tests](https://img.shields.io/badge/Pytest-84%25%20Coverage-brightgreen?logo=pytest&logoColor=white)](https://github.com/mfaujian/multivendor-ecommerce-backend/actions/workflows/tests.yml)
+[![Tests](https://img.shields.io/badge/Pytest-83%25%20Coverage-brightgreen?logo=pytest&logoColor=white)](https://github.com/mfaujian/multivendor-ecommerce-backend/actions/workflows/tests.yml)
 [![Live API](https://img.shields.io/badge/Railway-Live%20API-8A2BE2?logo=railway&logoColor=white)](https://multivendor-ecommerce-backend.up.railway.app/swagger-ui/)
 [![Postman](https://img.shields.io/badge/Postman-API%20Docs-FF6C37?logo=postman&logoColor=white)](./postman-ecommerce-API.json)
 [![Python](https://img.shields.io/badge/Python-Dependencies-3776AB?logo=python&logoColor=white)](./requirements.txt)
@@ -21,6 +21,7 @@
     - [2. Cascading Soft-Deletion](#2-cascading-soft-deletion)
     - [3. Product Deletion Guard](#3-product-deletion-guard)
     - [4. Order Deletion Constraint](#4-order-deletion-constraint)
+  - [Order Lifecycle State Machine](#order-lifecycle-state-machine)
   - [Database Schema](#database-schema)
     - [Entity Relationship Diagram (ERD)](#entity-relationship-diagram-erd)
   - [Automated Testing \& Quality Assurance](#automated-testing--quality-assurance)
@@ -70,11 +71,14 @@ The codebase follows a layered **Model-Controller-Service (MCS)** architecture w
 ## Core Architectural Features
 *   **Split-Order Checkout System:** Intelligently dissects a single user cart into multiple isolated orders based on distinct seller IDs, ensuring accurate logistics and financial segregation.
 *   **Role-Based Access Control (RBAC):** Secures endpoints using JWT authentication, strictly restricting data mutation operations based on user roles (Admin, Seller, Buyer).
-*   **Resilient Data Management:** Implements comprehensive soft-deletion mechanisms across users, stores, and products to maintain referential integrity without destroying historical transaction data.
+*   **Resilient Data Management:** Implements comprehensive soft-deletion mechanisms across users, stores, products, and orders to maintain referential integrity without destroying historical transaction data.
+*   **Multi-Level Category Hierarchy:** Categories support a self-referencing parent-child structure, letting products live under a specific subcategory (e.g., "Circuit Breakers & MCBs" under "Electrical & Panels") while `GET /categories` still returns a clean, navigable top-level tree with subcategories nested inside.
+*   **UUID-Identified Orders:** Order records use randomly generated UUIDs instead of sequential integers, closing off order-number enumeration attacks (IDOR) where a bad actor could simply guess adjacent order IDs.
+*   **Enforced Order Status State Machine:** Status changes must follow a strict, explicit progression — no role, including admin, can skip lifecycle stages (see [Order Lifecycle State Machine](#order-lifecycle-state-machine)).
 *   **Dynamic Data Filtering:** Provides robust product discovery through dynamic querying (price ranges, category IDs, text search) combined with offset pagination.
-*   **Automated Slug Generation:** Prevents URL collisions by automatically generating unique, SEO-friendly product slugs embedded with UUIDs.
+*   **Automated Slug Generation:** Prevents URL collisions by automatically generating unique, SEO-friendly product slugs embedded with UUIDs, directly retrievable via `GET /products/slug/{slug}`.
 *   **Layered MCS + DTO Architecture:** Business logic is fully decoupled from HTTP handling via a dedicated Service layer, with Marshmallow schemas enforcing strict request/response contracts at the boundary.
-*   **Product Deletion Guard:** Blocks the deletion of any product still tied to an order in `pending`, `processing`, or `shipped` status, protecting in-flight transactions from data integrity issues.
+*   **Product Deletion Guard:** Blocks the deletion of any product still tied to an order in `pending`, `processing`, or `shipped` status, protecting in-flight transactions from data integrity issues. Deletable by the product's owning seller **or** by an admin (e.g., to remove a listing that violates marketplace policy).
 
 ---
 
@@ -107,6 +111,7 @@ app/
     └── errors.py            # Global JSON error handlers (incl. Marshmallow ValidationError)
 run.py                       # Application entry point
 Dockerfile                   # Production container image definition
+seed.py                      # Business-realistic dummy data generator (idempotent)
 ```
 
 **Request flow for a typical write operation** (e.g. `POST /products`):
@@ -132,20 +137,42 @@ To preserve financial audit trails and prevent `IntegrityError` on foreign keys,
 * If a User is deleted, their account is flagged as inactive.
 * If that User is also a Seller, the `Sellers` profile is deactivated.
 * Subsequently, all `Products` belonging to that seller are automatically pulled from the public catalog via an `is_active=False` flag.
-* Previous `Orders` involving these deleted entities remain perfectly intact for bookkeeping.
+* Previous `Orders` involving these deleted entities remain perfectly intact for bookkeeping — each order's UUID identifier stays permanently resolvable regardless of whether the buyer or seller account tied to it is later deactivated, so financial history is never orphaned.
 
 ### 3. Product Deletion Guard
-Deleting a product is not a simple flag flip. Before a product can be soft-deleted, the system checks whether it is referenced by any `OrderItems` belonging to an `Order` still in `pending`, `processing`, or `shipped` status. If such a reference exists, the deletion is rejected with a `409 Conflict` — a seller cannot pull a product out from under a customer's in-flight order. Once every order referencing the product reaches a terminal state (`delivered` or `cancelled`), the same request succeeds.
+Deleting a product is not a simple flag flip. Before a product can be soft-deleted, the system checks whether it is referenced by any `OrderItems` belonging to an `Order` still in `pending`, `processing`, or `shipped` status. If such a reference exists, the deletion is rejected with a `409 Conflict` — a seller cannot pull a product out from under a customer's in-flight order. Once every order referencing the product reaches a terminal state (`delivered` or `cancelled`), the same request succeeds. This action is available to the product's owning seller, or to an admin acting independently of ownership (e.g., removing a listing that violates marketplace policy).
 
 ### 4. Order Deletion Constraint
-`Orders` are treated as append-mostly financial records, not freely-erasable resources. `DELETE /orders/{id}` only succeeds for orders whose `status` is `cancelled` — any order still `pending`, `processing`, `shipped`, or already `delivered` is rejected, preserving both in-flight transactions and the completed sales history used for reporting.
+`Orders` are treated as append-mostly financial records, not freely-erasable resources. `DELETE /orders/{id}` performs a **soft delete** — flipping `is_active` to `false`, never removing the row — and only succeeds when the order's `status` is `cancelled`; any order still `pending`, `processing`, `shipped`, or already `delivered` is rejected, preserving both in-flight transactions and the completed sales history used for reporting.
+
+---
+
+## Order Lifecycle State Machine
+
+The `status` column on `orders` only allows specific forward transitions, enforced centrally in `order_service.update_order_status()` — no role, including admin, can bypass this table:
+
+```
+pending ──→ processing ──→ shipped ──→ delivered
+   │             │
+   └─────────────┴──────────────────────────→ cancelled
+```
+
+| From \ To | `processing` | `shipped` | `delivered` | `cancelled` |
+| :--- | :---: | :---: | :---: | :---: |
+| **`pending`** | ✅ | ❌ | ❌ | ✅ *(buyer or admin)* |
+| **`processing`** | — | ✅ | ❌ | ✅ *(admin only)* |
+| **`shipped`** | — | — | ✅ | ❌ |
+| **`delivered`** | — | — | — | ❌ *(terminal)* |
+| **`cancelled`** | — | — | — | ❌ *(terminal)* |
+
+Any request attempting a transition outside this table — regardless of role — is rejected with `409 Conflict`. Cancelling an order restores stock for every item in it (see [Cascading Soft-Deletion](#2-cascading-soft-deletion)).
 
 ---
 
 ## Database Schema
 
 ### Entity Relationship Diagram (ERD)
-> **Note:** Below is the visual representation of the database schema.
+> **Note:** Below is the visual representation of the database schema. `ORDERS.id` and `ORDER_ITEMS.order_id` are UUIDs; `CATEGORIES` is self-referencing to support the subcategory hierarchy.
 ```mermaid
 erDiagram
     USERS ||--o| SELLERS : "has profile (1:1)"
@@ -154,6 +181,7 @@ erDiagram
     SELLERS ||--o{ PRODUCTS : "manages inventory"
     SELLERS ||--o{ ORDERS : "receives as seller"
     CATEGORIES ||--o{ PRODUCTS : "categorizes"
+    CATEGORIES ||--o{ CATEGORIES : "has subcategories"
     CARTS ||--o{ CART_ITEMS : "holds"
     PRODUCTS ||--o{ CART_ITEMS : "added to"
     ORDERS ||--o{ ORDER_ITEMS : "contains"
@@ -177,19 +205,22 @@ erDiagram
         string slug
         numeric price
         int stock
+        boolean is_active
     }
     CATEGORIES {
         int id PK
+        int parent_id FK "Self-referencing, nullable"
         string name
     }
     ORDERS {
-        int id PK
+        uuid id PK
         int user_id FK "Buyer ID"
         int seller_id FK
         string status
+        boolean is_active
     }
     ORDER_ITEMS {
-        int order_id PK, FK
+        uuid order_id PK, FK
         int product_id PK, FK
         int quantity
     }
@@ -203,16 +234,16 @@ erDiagram
         int quantity
     }
 ```
-The database is heavily normalized to ensure data integrity across the marketplace. Frequently filtered and sorted columns (`orders.status`, `orders.created_at`, `products.category_id`, `products.seller_id`, `carts.user_id`) are backed by explicit indexes for query performance at scale.
+The database is heavily normalized to ensure data integrity across the marketplace. Frequently filtered and sorted columns (`orders.status`, `orders.created_at`, `products.category_id`, `products.seller_id`, `carts.user_id`, `categories.parent_id`) are backed by explicit indexes for query performance at scale.
 
 | Table Name | Primary Purpose | Key Relationships |
 | :--- | :--- | :--- |
 | **`users`** | Central identity management and authentication. | 1:1 with `sellers`, 1:1 with `carts`, 1:M with `orders`. |
 | **`sellers`** | Store profiles for users who register to sell. | PK is an FK to `users.id`. 1:M with `products`. |
-| **`categories`** | Master data for product classification. | 1:M with `products`. |
-| **`products`** | Inventory catalog with auto-generated slugs. | Belongs to `categories` and `sellers`. |
+| **`categories`** | Master data for product classification, supporting a self-referencing parent-child hierarchy (top-level categories and subcategories underneath them). | 1:M with `products`; self-referencing 1:M for subcategories via `parent_id`. |
+| **`products`** | Inventory catalog with auto-generated slugs, independently retrievable via `GET /products/slug/{slug}`. | Belongs to `categories` and `sellers`. |
 | **`carts` & `cart_items`** | Temporary states for pre-checkout items. | M:N association between `users` and `products`. |
-| **`orders` & `order_items`**| Transaction records, deletable only once `cancelled` (see [Order Deletion Constraint](#4-order-deletion-constraint)). | Bridges `users` (buyer) and `sellers`. |
+| **`orders` & `order_items`**| Transaction records identified by UUID (not sequential integers) to prevent order-number guessing, soft-deletable only once `cancelled` (see [Order Deletion Constraint](#4-order-deletion-constraint)). | Bridges `users` (buyer) and `sellers`. |
 
 ---
 
@@ -222,11 +253,12 @@ This backend is safeguarded by a comprehensive **End-to-End (E2E) Test Suite** b
 
 *   **Positive & Negative Testing:** Validates data boundaries (e.g., rejecting negative stock quantities or zero-priced items).
 *   **Security Validations:** Actively tests against Horizontal Privilege Escalation (IDOR), ensuring buyers cannot access or modify orders belonging to other accounts.
+*   **State Machine Enforcement:** Verifies that illegal order status jumps (e.g., `pending` directly to `delivered`) are rejected with `409`, regardless of the caller's role.
 *   **Anomaly Prevention:** Halts checkout executions involving "Ghost Products" (items soft-deleted by sellers while still resting in a buyer's cart).
 *   **Isolated Unit Tests:** `tests/test_services.py` (`TestProductService`, `TestAuthMiddleware`) tests pure business logic — slug generation, password hashing — directly against the service and middleware layers, with no Flask request/response cycle involved.
 
 > **Visual Proof: E2E Test Coverage**
-![Pytest terminal showing 100% Passed metrics across 35/35 class-based E2E test](assets/img_readme/pytestresult.png)
+![Pytest terminal showing 100% Passed metrics across the class-based E2E test suite](assets/img_readme/pytestresult.png)
 
 ---
 
@@ -266,6 +298,7 @@ Beyond passing its own test suite, this API includes several production-hardenin
 *   **Environment-Aware CORS:** Allowed origins are controlled via the `CORS_ORIGINS` environment variable rather than hardcoded, so the same codebase can run wide-open in development and locked-down in production.
 *   **Fail-Fast Configuration:** The app refuses to start if `DATABASE_URL` or `JWT_SECRET_KEY` are missing, rather than silently falling back to an insecure default.
 *   **Database Scheme Normalization:** `config.py` automatically rewrites a legacy `postgres://` connection string (as issued by some hosting providers, including Railway) into the `postgresql://` scheme SQLAlchemy 1.4+ requires — without this, the app would crash on startup on those providers.
+*   **Health Check with Correct HTTP Semantics:** `GET /health` returns `200 {"status": "healthy", "database": "connected"}` when the database is reachable and `503 {"status": "unhealthy", ...}` when it is not — letting Railway or any external uptime monitor detect failures from the HTTP status code alone, without needing to parse the response body.
 *   **Continuous Integration:** Every push and pull request runs the full `pytest` suite via GitHub Actions (`.github/workflows/tests.yml`), catching regressions before they reach `main`.
 
 ---
@@ -312,7 +345,7 @@ docker run -p 8000:8000 \
   -e PORT=8000 \
   multivendor-api
 ```
-Then visit `http://localhost:8000/health`.
+Then visit `http://localhost:8000/health` — a healthy response returns `{"status": "healthy", "database": "connected"}`.
 
 > **Visual Proof: Container Running Locally**
 ![Docker Desktop showing the multivendor-api container running with its port mapping and status](assets/img_readme/docker-desktop-container.png)
@@ -335,7 +368,7 @@ flowchart LR
 
 *   **Web Service:** built directly from this repository's `Dockerfile` on every push to `main` — no Nixpacks auto-detection or Procfile involved, since the Dockerfile's `CMD` already fully specifies how the app starts. Railway injects the runtime `PORT`, which Gunicorn binds to dynamically.
 *   **PostgreSQL Service:** a managed Postgres instance, private by default. The Web Service connects to it using Railway's internal service reference (`${{Postgres.DATABASE_URL}}`) rather than a manually copy-pasted connection string — this resolves automatically at deploy time, uses the private network (no egress cost, lower latency), and never needs updating if the database credentials rotate.
-*   **TCP Proxy (Public Networking):** disabled by default for security — explicitly enabled on the Postgres service to expose a `DATABASE_PUBLIC_URL`, used *only* for connecting external tools (e.g. DBeaver) and running one-off administrative commands (schema migrations) from a local machine. The application itself never uses this public URL.
+*   **TCP Proxy (Public Networking):** disabled by default for security — explicitly enabled on the Postgres service to expose a `DATABASE_PUBLIC_URL`, used *only* for connecting external tools (e.g. DBeaver) and running one-off administrative commands (schema migrations, seeding) from a local machine. The application itself never uses this public URL.
 *   **Environment Variables:** `JWT_SECRET_KEY`, `CORS_ORIGINS`, and `IS_PRODUCTION` are configured directly on the Web Service, separate from the database credentials.
 
 > **Visual Proof: Railway Project Architecture**
@@ -350,7 +383,7 @@ Because this project runs on Railway's free trial tier (no shell access), schema
 # Apply schema migrations
 DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" flask db upgrade
 
-# Populate the live database with sample data
+# Populate the live database with a business-realistic dataset
 DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" python seed.py
 ```
 `seed.py` checks for existing records before inserting, so it is safe to re-run against production at any time without creating duplicates.
@@ -377,7 +410,7 @@ DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" python seed.py
 ```bash
    flask db upgrade
 ```
-6. Populate the database with a pre-configured testing environment:
+6. Populate the database with a rich, business-realistic dataset — 4 sellers across 3 industries (electrical components, confectionery, office supplies, plus a dedicated load-testing store), a full category hierarchy with subcategories, a discontinued product example, and an order history spanning every lifecycle status across returning customers:
 ```bash
    python seed.py
 ```
@@ -424,36 +457,38 @@ Below is the testing matrix covering all core functionalities.
 ### 3. Catalog Management (`/categories`, `/products`)
 | Method | Endpoint | Description | Testing Criteria | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/categories` | Create category | Protected by `@roles_required('admin')`. | ✅ |
-| `GET` | `/categories` | List all categories | Returns the full category list, no auth required. | ✅ |
-| `GET` | `/categories/{id}` | Get a category by ID | Returns `404` for a non-existent ID. | ✅ |
+| `POST` | `/categories` | Create category or subcategory | Protected by `@roles_required('admin')`; accepts optional `parent_id` to nest under an existing category. | ✅ |
+| `GET` | `/categories` | List top-level categories | Returns each category with its subcategories nested inside; no auth required. | ✅ |
+| `GET` | `/categories/{id}` | Get a category by ID | Returns the category's active products; `404` for a non-existent ID. | ✅ |
 | `PUT` | `/categories/{id}` | Update a category | Protected by `@roles_required('admin')`; rejects duplicate names. | ✅ |
-| `DELETE`| `/categories/{id}` | Delete a category | **Blocked with `409`** if any product is still assigned to it. | ✅ |
+| `DELETE`| `/categories/{id}` | Delete a category | **Blocked with `409`** if any product or subcategory is still assigned to it. | ✅ |
 | `GET` | `/products` | List all products | Tests dynamic filters (name, category, min/max price) & pagination. | ✅ |
+| `GET` | `/products/slug/{slug}` | Get a product by its slug | Returns `404` for a non-existent or inactive slug. | ✅ |
 | `POST` | `/products` | Add new product | Auto-generates UUID slug, validates stock/price constraints via `ProductCreateSchema`. | ✅ |
 | `PUT` | `/products/{id}` | Update product | Regenerates slug ONLY if the product name is changed. | ✅ |
-| `DELETE`| `/products/{id}` | Delete a product | **Blocked with `409`** if the product is tied to a `pending`, `processing`, or `shipped` order. | ✅ |
+| `DELETE`| `/products/{id}` | Delete a product | Owning seller **or admin**. **Blocked with `409`** if the product is tied to a `pending`, `processing`, or `shipped` order. | ✅ |
 
 ### 4. Cart & Checkout (`/carts`, `/orders`)
 | Method | Endpoint | Description | Testing Criteria | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/carts/items` | Add to cart | Prevents sellers from buying their own products, checks stock. | ✅ |
-| `POST` | `/orders/checkout` | Process transaction | Successfully splits 1 cart into multiple distinct seller orders. | ✅ |
+| `POST` | `/orders/checkout` | Process transaction | Successfully splits 1 cart into multiple distinct seller orders, each with a UUID identifier. | ✅ |
 | `GET` | `/orders` | Get user orders | Filters by `?status=`, searches by `?product=`, sorts by `?sort=asc/desc`, paginated. | ✅ |
-| `PUT` | `/orders/{id}/status`| Update logistics | Admins can update anything. Sellers manage shipping. Buyers can only cancel. | ✅ |
-| `DELETE`| `/orders/{id}` | Delete an order record | Only succeeds when order status is `cancelled`; otherwise rejected. | ✅ |
+| `PUT` | `/orders/{id}/status`| Update logistics | Enforces the [status state machine](#order-lifecycle-state-machine); admins can act on any order, sellers manage shipping, buyers can only cancel from `pending`. | ✅ |
+| `DELETE`| `/orders/{id}` | Soft-delete an order record | Only succeeds when order status is `cancelled`; otherwise rejected with `400`. | ✅ |
 
 ---
 
 ## Postman E2E Workflow & Security Testing
 
-While Swagger UI provides excellent endpoint-level interaction, the complete business lifecycles and security edge cases (Negative Testing) are documented and tested using Postman. This collection contains a comprehensive suite of API requests divided into 5 core testing modules:
+While Swagger UI provides excellent endpoint-level interaction, the complete business lifecycles and security edge cases (Negative Testing) are documented and tested using Postman. This collection contains a comprehensive suite of API requests divided into core testing modules:
 
 * **1. Auth & Identity:** JWT token generation, role extraction, and automated environment variable scripting for seamless testing.
-* **2. Catalog Management:** Dynamic product filtering and seller-restricted CRUD operations.
+* **2. Catalog Management:** Dynamic product filtering, slug-based lookup, category hierarchy management, and seller/admin-restricted CRUD operations.
 * **3. Cart & Checkout:** Active prevention of cart exploits (negative quantity injections, out-of-stock bypassing) and the core execution of the **Split-Order Checkout** architecture.
-* **4. Order Management:** End-to-end lifecycle tracking, allowing buyers to view order history and sellers to update logistics statuses.
-* **5. Security & RBAC:** Active testing against Horizontal Privilege Escalation (IDOR) and role-based status manipulation (e.g., providing `403 Forbidden` proofs when sellers attempt to cancel orders or access other tenants' data).
+* **4. Order Management:** End-to-end lifecycle tracking respecting the [state machine](#order-lifecycle-state-machine), allowing buyers to view order history and sellers to update logistics statuses.
+* **5. Security & RBAC:** Active testing against Horizontal Privilege Escalation (IDOR) and role-based status manipulation (e.g., providing `403 Forbidden` proofs when sellers attempt to cancel orders, and `409 Conflict` proofs when any role attempts an illegal status jump).
+* **7. System Health:** Verifies `GET /health` returns proper HTTP semantics for uptime monitoring.
 
 Click the badge below to access the complete JSON collection. You can import this file directly into your local Postman workspace to replicate the End-to-End testing environment.
 
@@ -473,4 +508,4 @@ To further optimize the marketplace ecosystem and elevate the system to enterpri
 *   **Direct Checkout API:** Building a decoupled `"Buy Now"` route to bypass the cart state, reducing user friction for single-item purchases.
 *   **API Versioning:** Introducing a `/api/v1/` prefix ahead of any breaking changes, to support long-term client compatibility.
 
-> ✅ Several items previously listed here have since been completed: request/response validation now runs through dedicated **Marshmallow DTO schemas** in a layered MCS architecture, database schema evolution is managed via **Flask-Migrate**, **rate limiting** protects auth endpoints, and a **CI pipeline** runs the full test suite on every push (see [Infrastructure & Deployment Readiness](#infrastructure--deployment-readiness)). The application is also fully **containerized** and **live-deployed** (see [Containerization](#containerization-docker) and [Cloud Architecture](#cloud-architecture-railway)).
+> ✅ Several items previously listed here have since been completed: request/response validation now runs through dedicated **Marshmallow DTO schemas** in a layered MCS architecture, database schema evolution is managed via **Flask-Migrate**, **rate limiting** protects auth endpoints, a **CI pipeline** runs the full test suite on every push, categories support a **multi-level hierarchy**, orders use **UUID identifiers** with an **enforced state machine**, and the **health check** returns correct HTTP status semantics (see [Infrastructure & Deployment Readiness](#infrastructure--deployment-readiness)). The application is also fully **containerized** and **live-deployed** (see [Containerization](#containerization-docker) and [Cloud Architecture](#cloud-architecture-railway)).

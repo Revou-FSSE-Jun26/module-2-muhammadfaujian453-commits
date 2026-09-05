@@ -860,6 +860,263 @@
               "body": "{\n    \"message\": \"Product successfully updated!\",\n    \"product\": {\n        \"category_id\": 1,\n        \"created_at\": null,\n        \"description\": \"Breaker for you electricity\",\n        \"id\": 1,\n        \"image_url\": \"https://dummyimage.com/400x400/ccc/000&text=MCB+10A\",\n        \"is_active\": true,\n        \"name\": \"MCB 10 Ampere Schneider\",\n        \"price\": 120000,\n        \"seller_id\": 2,\n        \"slug\": \"mcb-10-ampere-schneider-4f33fe9d\",\n        \"stock\": 150,\n        \"updated_at\": \"2026-08-21T23:55:57.796639+07:00\"\n    }\n}"
             }
           ]
+        },
+        {
+          "name": "5. Get Product by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/products/slug/mcb-10-ampere-schneider-2dccef7b",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products",
+                "slug",
+                "mcb-10-ampere-schneider-2dccef7b"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/products/slug/mcb-10-ampere-schneider-2dccef7b",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "products",
+                    "slug",
+                    "mcb-10-ampere-schneider-2dccef7b"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "date",
+                  "value": "Sat, 05 Sep 2026 12:57:35 GMT"
+                },
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "content-length",
+                  "value": "365"
+                },
+                {
+                  "key": "access-control-allow-origin",
+                  "value": "*"
+                },
+                {
+                  "key": "connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Product retrieved successfully\",\n  \"product\": {\n    \"category_id\": 2,\n    \"created_at\": null,\n    \"description\": null,\n    \"id\": 1,\n    \"image_url\": \"https://dummyimage.com/400x400/ccc/000&text=MCB+10A\",\n    \"is_active\": true,\n    \"name\": \"MCB 10 Ampere Schneider\",\n    \"price\": 55000,\n    \"seller_id\": 2,\n    \"slug\": \"mcb-10-ampere-schneider-2dccef7b\",\n    \"stock\": 100,\n    \"updated_at\": \"2026-09-05T19:30:45.412419+07:00\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "6. Admin Delete Any Product (Bypass Ownership)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products/14",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products",
+                "14"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/products/14",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "products",
+                    "14"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "date",
+                  "value": "Sat, 05 Sep 2026 13:04:30 GMT"
+                },
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "content-length",
+                  "value": "85"
+                },
+                {
+                  "key": "access-control-allow-origin",
+                  "value": "*"
+                },
+                {
+                  "key": "connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Product 'Bantex Ring Binder 2-Inch' has been successfully deactivated.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "7. Add Subcategory Under Electrical",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Testing Subcategory via Postman\",\n    \"description\": \"Demonstrates hierarchy\",\n    \"parent_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Testing Subcategory via Postman\",\n    \"description\": \"Demonstrates hierarchy\",\n    \"parent_id\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "categories"
+                  ]
+                }
+              },
+              "status": "CREATED",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "date",
+                  "value": "Sat, 05 Sep 2026 13:11:34 GMT"
+                },
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "content-length",
+                  "value": "245"
+                },
+                {
+                  "key": "access-control-allow-origin",
+                  "value": "*"
+                },
+                {
+                  "key": "connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"category\": {\n    \"created_at\": null,\n    \"description\": \"Demonstrates hierarchy\",\n    \"id\": 11,\n    \"name\": \"Testing Subcategory via Postman\",\n    \"parent_id\": 1,\n    \"subcategories\": [],\n    \"updated_at\": \"2026-09-05T20:11:34.685698+07:00\"\n  },\n  \"message\": \"Category successfully created!\"\n}"
+            }
+          ]
         }
       ]
     },
@@ -1725,6 +1982,103 @@
               ],
               "cookie": [],
               "body": "{\n    \"message\": \"Order status successfully updated to 'shipped'!\",\n    \"order\": {\n        \"created_at\": null,\n        \"id\": 6,\n        \"seller_id\": 2,\n        \"shipping_address\": \"Jl. Cibaduyut Raya, Bandung, West Java\",\n        \"status\": \"shipped\",\n        \"total_amount\": 385000,\n        \"updated_at\": \"2026-08-22T00:05:36.892135+07:00\",\n        \"user_id\": 5\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. Reject Invalid Status Jump",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"delivered\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/bba663fe-029c-44ac-bcf2-00dc1abcccd8/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                "bba663fe-029c-44ac-bcf2-00dc1abcccd8",
+                "status"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"status\": \"delivered\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/orders/bba663fe-029c-44ac-bcf2-00dc1abcccd8/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "bba663fe-029c-44ac-bcf2-00dc1abcccd8",
+                    "status"
+                  ]
+                }
+              },
+              "status": "CONFLICT",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "date",
+                  "value": "Sat, 05 Sep 2026 13:07:37 GMT"
+                },
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "content-length",
+                  "value": "64"
+                },
+                {
+                  "key": "access-control-allow-origin",
+                  "value": "*"
+                },
+                {
+                  "key": "connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Cannot change status from 'pending' to 'delivered'.\"\n}"
             }
           ]
         }
@@ -2708,6 +3062,76 @@
               ],
               "cookie": [],
               "body": "{\n    \"message\": \"Category 'Footwear' deleted successfully!\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. System Health",
+      "item": [
+        {
+          "name": "1. Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/health",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "server",
+                  "value": "Werkzeug/3.1.8 Python/3.14.5"
+                },
+                {
+                  "key": "date",
+                  "value": "Sat, 05 Sep 2026 13:09:02 GMT"
+                },
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "content-length",
+                  "value": "44"
+                },
+                {
+                  "key": "access-control-allow-origin",
+                  "value": "*"
+                },
+                {
+                  "key": "connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"database\": \"connected\",\n  \"status\": \"healthy\"\n}"
             }
           ]
         }
