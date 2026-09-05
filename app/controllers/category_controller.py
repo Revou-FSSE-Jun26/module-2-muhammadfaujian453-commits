@@ -114,7 +114,8 @@ def get_category_by_id(category_id):
     if error:
         return jsonify({"error": error["message"]}), error["status_code"]
 
-    category_data = detail_response_schema.dump(result)
+    category_data = response_schema.dump(result["category"])
+    category_data["products"] = ProductResponseSchema(many=True).dump(result["products"])
 
     return jsonify({
         "message": "Category retrieved successfully",

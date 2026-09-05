@@ -38,9 +38,7 @@ def get_category_by_id(category_id):
         return None, {"message": "Category not found!", "status_code": 404}
 
     active_products = Products.query.filter_by(category_id=category_id, is_active=True).all()
-    category.products = active_products
-
-    return category, None
+    return {"category": category, "products": active_products}, None
 
 
 def update_category(category_id, validated_data):

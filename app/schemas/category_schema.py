@@ -1,7 +1,5 @@
 """Category schemas — create/update request DTOs and response DTO."""
 from marshmallow import Schema, fields, validate
-from app.schemas.product_schema import ProductResponseSchema
-
 
 class CategoryCreateSchema(Schema):
     name = fields.Str(required=True, validate=validate.Length(min=1))
@@ -23,7 +21,3 @@ class CategoryResponseSchema(Schema):
     subcategories = fields.List(fields.Nested(lambda: CategoryResponseSchema()))
     created_at = fields.DateTime(format="iso")
     updated_at = fields.DateTime(format="iso")
-
-class CategoryDetailResponseSchema(CategoryResponseSchema):
-    """Extends the base schema with its active products — used only by GET /categories/<id>."""
-    products = fields.List(fields.Nested(ProductResponseSchema))
