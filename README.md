@@ -111,7 +111,7 @@ app/
     └── errors.py            # Global JSON error handlers (incl. Marshmallow ValidationError)
 run.py                       # Application entry point
 Dockerfile                   # Production container image definition
-seed.py                      # Business-realistic dummy data generator (idempotent)
+seed_mephub.py                      # Business-realistic dummy data generator (idempotent)
 ```
 
 **Request flow for a typical write operation** (e.g. `POST /products`):
@@ -384,9 +384,9 @@ Because this project runs on Railway's free trial tier (no shell access), schema
 DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" flask db upgrade
 
 # Populate the live database with a business-realistic dataset
-DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" python seed.py
+DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" SEED_ADMIN_PASSWORD="..." SEED_USER_PASSWORD="..." python seed_mephub.py --yes
 ```
-`seed.py` checks for existing records before inserting, so it is safe to re-run against production at any time without creating duplicates.
+`seed_mephub.py` **deletes all marketplace data first**, then loads the MEP demo catalogue, so only run it against a database you are happy to reset. It refuses to run without `--yes` and without the two password variables.
 
 ---
 
@@ -412,7 +412,7 @@ DATABASE_URL="<DATABASE_PUBLIC_URL from Railway>" python seed.py
 ```
 6. Populate the database with a rich, business-realistic dataset — 4 sellers across 3 industries (electrical components, confectionery, office supplies, plus a dedicated load-testing store), a full category hierarchy with subcategories, a discontinued product example, and an order history spanning every lifecycle status across returning customers:
 ```bash
-   python seed.py
+   SEED_ADMIN_PASSWORD="..." SEED_USER_PASSWORD="..." python seed_mephub.py --yes
 ```
 7. Run the development server:
 ```bash
