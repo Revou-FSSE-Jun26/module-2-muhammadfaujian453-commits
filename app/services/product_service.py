@@ -126,7 +126,7 @@ def get_products(filters, page, limit):
         query = query.filter(Products.category_id.in_(get_category_tree_ids(filters['category_id'])))
 
     # `search` looks at name, SKU and brand; `name` is the older parameter and behaves the same
-    term = filters.get('search') or filters.get('name')
+    term = filters.get('search') or filters.get('q') or filters.get('name')
     if term:
         pattern = f"%{term.strip()}%"
         query = query.filter(or_(

@@ -131,7 +131,7 @@ def get_products():
     filters = {
         'category_id': request.args.get('category_id', type=int),
         'name': request.args.get('name', type=str),
-        'search': request.args.get('search', type=str),
+        'search': request.args.get('search', type=str) or request.args.get('q', type=str),
         'brand': request.args.get('brand', type=str),
         'sort': request.args.get('sort', type=str),
         'in_stock': request.args.get('in_stock', default='false').lower() in ('1', 'true', 'yes'),

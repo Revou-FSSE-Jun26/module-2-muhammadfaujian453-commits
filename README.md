@@ -1,6 +1,6 @@
 # Multivendor E-Commerce Backend
 
-[![Tests](https://img.shields.io/badge/Pytest-83%25%20Coverage-brightgreen?logo=pytest&logoColor=white)](https://github.com/mfaujian/multivendor-ecommerce-backend/actions/workflows/tests.yml)
+[![Tests](https://img.shields.io/badge/Pytest-89%25%20Coverage-brightgreen?logo=pytest&logoColor=white)](https://github.com/mfaujian/multivendor-ecommerce-backend/actions/workflows/tests.yml)
 [![Live API](https://img.shields.io/badge/Railway-Live%20API-8A2BE2?logo=railway&logoColor=white)](https://multivendor-ecommerce-backend.up.railway.app/swagger-ui/)
 [![Postman](https://img.shields.io/badge/Postman-API%20Docs-FF6C37?logo=postman&logoColor=white)](./postman-ecommerce-API.json)
 [![Python](https://img.shields.io/badge/Python-Dependencies-3776AB?logo=python&logoColor=white)](./requirements.txt)
@@ -36,6 +36,7 @@
     - [2. Store Management (`/sellers`)](#2-store-management-sellers)
     - [3. Catalog Management (`/categories`, `/products`)](#3-catalog-management-categories-products)
     - [4. Cart \& Checkout (`/carts`, `/orders`)](#4-cart--checkout-carts-orders)
+    - [5. User Addresses (`/addresses`)](#5-user-addresses-addresses)
   - [Postman E2E Workflow \& Security Testing](#postman-e2e-workflow--security-testing)
   - [Future Enhancements](#future-enhancements)
 
@@ -79,6 +80,7 @@ The codebase follows a layered **Model-Controller-Service (MCS)** architecture w
 *   **Automated Slug Generation:** Prevents URL collisions by automatically generating unique, SEO-friendly product slugs embedded with UUIDs, directly retrievable via `GET /products/slug/{slug}`.
 *   **Layered MCS + DTO Architecture:** Business logic is fully decoupled from HTTP handling via a dedicated Service layer, with Marshmallow schemas enforcing strict request/response contracts at the boundary.
 *   **Product Deletion Guard:** Blocks the deletion of any product still tied to an order in `pending`, `processing`, or `shipped` status, protecting in-flight transactions from data integrity issues. Deletable by the product's owning seller **or** by an admin (e.g., to remove a listing that violates marketplace policy).
+*   **Address Management System:** Allows buyers to manage a secure, personalized address book for streamlined checkout and precise logistics routing.
 
 ---
 
@@ -186,6 +188,7 @@ erDiagram
     PRODUCTS ||--o{ CART_ITEMS : "added to"
     ORDERS ||--o{ ORDER_ITEMS : "contains"
     PRODUCTS ||--o{ ORDER_ITEMS : "purchased as"
+    USERS ||--o{ ADDRESSES : "saves"
 
     USERS {
         int id PK
@@ -233,12 +236,20 @@ erDiagram
         int product_id PK, FK
         int quantity
     }
+    ADDRESSES {
+    int id PK
+    int user_id FK "References users.id"
+    string recipient_name
+    string full_address
+    boolean is_default
+    }
 ```
 The database is heavily normalized to ensure data integrity across the marketplace. Frequently filtered and sorted columns (`orders.status`, `orders.created_at`, `products.category_id`, `products.seller_id`, `carts.user_id`, `categories.parent_id`) are backed by explicit indexes for query performance at scale.
 
 | Table Name | Primary Purpose | Key Relationships |
 | :--- | :--- | :--- |
 | **`users`** | Central identity management and authentication. | 1:1 with `sellers`, 1:1 with `carts`, 1:M with `orders`. |
+| **`addresses`** | Buku alamat pengguna untuk efisiensi pengiriman. | M:1 dengan users. |
 | **`sellers`** | Store profiles for users who register to sell. | PK is an FK to `users.id`. 1:M with `products`. |
 | **`categories`** | Master data for product classification, supporting a self-referencing parent-child hierarchy (top-level categories and subcategories underneath them). | 1:M with `products`; self-referencing 1:M for subcategories via `parent_id`. |
 | **`products`** | Inventory catalog with auto-generated slugs, independently retrievable via `GET /products/slug/{slug}`. | Belongs to `categories` and `sellers`. |
@@ -476,6 +487,14 @@ Below is the testing matrix covering all core functionalities.
 | `GET` | `/orders` | Get user orders | Filters by `?status=`, searches by `?product=`, sorts by `?sort=asc/desc`, paginated. | ✅ |
 | `PUT` | `/orders/{id}/status`| Update logistics | Enforces the [status state machine](#order-lifecycle-state-machine); admins can act on any order, sellers manage shipping, buyers can only cancel from `pending`. | ✅ |
 | `DELETE`| `/orders/{id}` | Soft-delete an order record | Only succeeds when order status is `cancelled`; otherwise rejected with `400`. | ✅ |
+
+### 5. User Addresses (`/addresses`)
+| Method | Endpoint | Description | Testing Criteria | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/addresses` | List saved delivery addresses | Returns all active addresses for the logged-in user. | ✅ |
+| `POST` | `/addresses` | Save a new delivery address | Validates payload, links to current user. | ✅ |
+| `PUT` | `/addresses/{id}`| Update a saved address | Ensures user can only update their own address. | ✅ |
+| `DELETE`| `/addresses/{id}`| Delete a saved address | Soft/hard deletes the address, ensuring owner authorization. | ✅ |
 
 ---
 
